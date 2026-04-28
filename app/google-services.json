@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "776352238493",
+    "project_id": "bismart-b73ee",
+    "storage_bucket": "bismart-b73ee.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:776352238493:android:4f7efcbe14bd7e3504fd74",
+        "android_client_info": {
+          "package_name": "com.example.bismart"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDNKB7vih8nWVEqn0Cp8sSgMw_pji-9ITc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
