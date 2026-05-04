@@ -43,34 +43,34 @@ dependencies {
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
     // Material Design (Para componentes UI bonitos)
-    implementation("com.google.android.material:material:1.11.0")
+    implementation(libs.material.v1110)
 
     // Navegación (Para gestionar los Fragments con el BottomNav)
-    implementation("androidx.navigation:navigation-fragment-ktx:2.7.7")
-    implementation("androidx.navigation:navigation-ui-ktx:2.7.7")
+    implementation(libs.navigation.fragment.ktx)
+    implementation(libs.navigation.ui.ktx)
 
-    // Google Maps y Localización
-    implementation("com.google.android.gms:play-services-maps:18.2.0")
-    implementation("com.google.android.gms:play-services-location:21.2.0")
+    // OpenStreetMaps
+    implementation(libs.osmdroid.android)
 
     // Retrofit y GSON (Para las llamadas a las APIs de Euskadi y Clima)
-    implementation("com.squareup.retrofit2:retrofit:2.9.0")
-    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation(libs.retrofit)
+    implementation(libs.converter.gson)
+    implementation(libs.adapter.rxjava3)
 
     // RxJava (Tema 19)
-    implementation("io.reactivex.rxjava3:rxjava:3.1.8")
-    implementation("io.reactivex.rxjava3:rxandroid:3.0.2")
+    implementation(libs.rxjava.v318)
+    implementation(libs.rxandroid)
 
     // Glide (Tema 16 - Carga de imágenes)
-    implementation("com.github.bumptech.glide:glide:4.16.0")
+    implementation(libs.glide)
 
     // Importamos el BoM de Firebase para gestionar versiones automáticamente
-    implementation(platform("com.google.firebase:firebase-bom:32.7.0"))
+    implementation(platform(libs.firebase.bom))
 
     // Dependencias para el Backend
-    implementation("com.google.firebase:firebase-firestore") // Base de datos NoSQL
-    implementation("com.google.firebase:firebase-auth")      // Autenticación
-    implementation("com.google.firebase:firebase-messaging") // Notificaciones Push
-    implementation("com.google.firebase:firebase-storage")   // Almacenamiento de imágenes
+    implementation(libs.firebase.firestore) // Base de datos NoSQL
+    implementation(libs.firebase.auth)      // Autenticación
+    implementation(libs.firebase.messaging) // Notificaciones Push
+    implementation(libs.firebase.storage)   // Almacenamiento de imágenes
 
 }
