@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.widget.SearchView;
@@ -14,9 +15,9 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.bismart.R;
-import com.example.bismart.ui.CentroAdapter;
 import com.example.bismart.models.CentroUniversitario;
 import com.example.bismart.repositories.CentroRepository;
+import com.example.bismart.ui.CentroAdapter;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 import com.google.firebase.firestore.DocumentSnapshot;
@@ -38,34 +39,27 @@ public class CentrosFragment extends Fragment {
         View view = inflater.inflate(R.layout.fragment_centros, container, false);
 
         recyclerView = view.findViewById(R.id.recyclerViewCentros);
-        recyclerView.setLayoutManager(new LinearLayoutManager(getContext())); // Mostrar en vertical
-
-        SearchView searchView = view.findViewById(R.id.searchView);
+        recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity());
 
-        // 1. Obtener ubicación del usuario
-        obtenerUbicacionYCentros();
-
-        // 2. Configurar buscador
+        SearchView searchView = view.findViewById(R.id.searchView);
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
-            @Override
-            public boolean onQueryTextSubmit(String query) { return false; }
-
-            @Override
-            public boolean onQueryTextChange(String newText) {
+            @Override public boolean onQueryTextSubmit(String query) { return false; }
+            @Override public boolean onQueryTextChange(String newText) {
                 if (adapter != null) adapter.filtrar(newText);
                 return true;
             }
         });
+
+        obtenerUbicacionYCentros();
 
         return view;
     }
 
     @SuppressLint("MissingPermission")
     private void obtenerUbicacionYCentros() {
-        // Asumimos que los permisos ya se pidieron en el MapaFragment
         fusedLocationClient.getLastLocation().addOnSuccessListener(location -> {
-            miUbicacion = location; // Puede ser null si el GPS está apagado
+            miUbicacion = location;
             descargarCentrosDeFirebase();
         });
     }
@@ -73,13 +67,29 @@ public class CentrosFragment extends Fragment {
     private void descargarCentrosDeFirebase() {
         new CentroRepository().obtenerTodos().addOnSuccessListener(queryDocumentSnapshots -> {
             listaCentros.clear();
-            for (DocumentSnapshot doc : queryDocumentSnapshots) {
+            for (DocumentSnapshot doc : queryDocumentSnapshots.getDocuments()) {
                 CentroUniversitario centro = doc.toObject(CentroUniversitario.class);
                 if (centro != null) listaCentros.add(centro);
             }
 
-            // Montar la lista
-            adapter = new CentroAdapter(listaCentros, miUbicacion);
+            adapter = new CentroAdapter(listaCentros, miUbicacion, centro -> {
+                // Abrir MapaFragment con el centro seleccionado
+                Bundle args = new Bundle();
+                args.putDouble("lat", centro.latitud);
+                args.putDouble("lng", centro.longitud);
+                args.putString("nombre", centro.nombre);
+                args.putString("entidad", centro.entidad);
+                args.putString("ubicacion", centro.ubicacion);
+
+                MapaFragment mapaFragment = new MapaFragment();
+                mapaFragment.setArguments(args);
+
+                requireActivity().getSupportFragmentManager()
+                        .beginTransaction()
+                        .replace(R.id.fragmentContainer, mapaFragment)
+                        .commit();
+            });
+
             recyclerView.setAdapter(adapter);
         });
     }

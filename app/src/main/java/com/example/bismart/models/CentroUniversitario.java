@@ -6,6 +6,7 @@ public class CentroUniversitario {
     public String entidad; // EHU, Deusto, MU
     public double latitud;
     public double longitud;
+    public String tiempoEstimado;
 
     // Constructor vacío
     public CentroUniversitario() {}

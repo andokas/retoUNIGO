@@ -1,10 +1,53 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
     android:background="#F5F5F5">
+
+    <!-- Selector de transporte -->
+    <com.google.android.material.chip.ChipGroup
+        android:id="@+id/chipGroupTransporte"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="8dp"
+        app:singleSelection="true"
+        app:selectionRequired="true">
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipPie"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🚶 A pie"
+            android:checkable="true"
+            style="@style/Widget.MaterialComponents.Chip.Filter"/>
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipBici"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🚲 Bici"
+            android:checkable="true"
+            style="@style/Widget.MaterialComponents.Chip.Filter"/>
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipBus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🚌 Bus"
+            android:checkable="true"
+            style="@style/Widget.MaterialComponents.Chip.Filter"/>
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipTranvia"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🚋 Tranvía"
+            android:checkable="true"
+            style="@style/Widget.MaterialComponents.Chip.Filter"/>
+
+    </com.google.android.material.chip.ChipGroup>
 
     <androidx.appcompat.widget.SearchView
         android:id="@+id/searchView"

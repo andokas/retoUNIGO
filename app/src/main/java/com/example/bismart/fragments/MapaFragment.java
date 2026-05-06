@@ -18,6 +18,9 @@ import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
 import com.example.bismart.R;
+import com.example.bismart.network.DirectionsApi;
+import com.example.bismart.network.DirectionsResponse;
+import com.example.bismart.network.GoogleMapsRetrofitClient;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -25,26 +28,40 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
-
-import com.example.bismart.models.CentroUniversitario;
-import com.example.bismart.repositories.CentroRepository;
-import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.android.gms.maps.model.Polyline;
+import com.google.android.gms.maps.model.PolylineOptions;
+import com.google.android.material.chip.ChipGroup;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class MapaFragment extends Fragment implements OnMapReadyCallback {
 
     private GoogleMap mMap;
     private FusedLocationProviderClient fusedLocationClient;
 
-    // Gestor moderno de permisos de Android
+    private LatLng centroSeleccionado;
+    private String centroNombre;
+    private String centroEntidad;
+    private String centroUbicacion;
+
+    private ChipGroup chipGroup;
+    private String transporteActual = "pie";
+    private Polyline rutaActual;
+    private Marker markerCentro;
+
     private final ActivityResultLauncher<String> requestPermissionLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
                 if (isGranted) {
                     obtenerUbicacionActual();
                 } else {
                     Toast.makeText(getContext(), "Permiso de ubicación denegado", Toast.LENGTH_SHORT).show();
-                    // Centrar en Bilbao por defecto si no da permisos
                     centrarEnBilbao();
                 }
             });
@@ -54,10 +71,35 @@ public class MapaFragment extends Fragment implements OnMapReadyCallback {
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_mapa, container, false);
 
-        // Inicializamos el cliente de ubicación
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity());
 
-        // Inicializamos el mapa
+        // Leer centro seleccionado si viene desde la lista
+        Bundle args = getArguments();
+        if (args != null) {
+            double lat = args.getDouble("lat", Double.NaN);
+            double lng = args.getDouble("lng", Double.NaN);
+            if (!Double.isNaN(lat) && !Double.isNaN(lng)) {
+                centroSeleccionado = new LatLng(lat, lng);
+                centroNombre = args.getString("nombre", "");
+                centroEntidad = args.getString("entidad", "");
+                centroUbicacion = args.getString("ubicacion", "");
+            }
+        }
+
+        chipGroup = view.findViewById(R.id.chipGroupTransporte);
+        if (chipGroup != null) {
+            chipGroup.setOnCheckedStateChangeListener((group, checkedIds) -> {
+                if (checkedIds.isEmpty()) return;
+                int id = checkedIds.get(0);
+                if (id == R.id.chipPie) transporteActual = "pie";
+                else if (id == R.id.chipBici) transporteActual = "bici";
+                else if (id == R.id.chipBus) transporteActual = "bus";
+                else if (id == R.id.chipTranvia) transporteActual = "tranvia";
+
+                recalcularRuta();
+            });
+        }
+
         SupportMapFragment mapFragment = (SupportMapFragment) getChildFragmentManager().findFragmentById(R.id.map);
         if (mapFragment != null) {
             mapFragment.getMapAsync(this);
@@ -70,30 +112,105 @@ public class MapaFragment extends Fragment implements OnMapReadyCallback {
     public void onMapReady(@NonNull GoogleMap googleMap) {
         mMap = googleMap;
 
-        // Comprobar si tenemos permisos
         if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             obtenerUbicacionActual();
         } else {
-            // Pedir permisos
             requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION);
         }
-        cargarCentrosEnMapa();
     }
 
     @SuppressLint("MissingPermission")
     private void obtenerUbicacionActual() {
-        mMap.setMyLocationEnabled(true); // Muestra el puntito azul
+        mMap.setMyLocationEnabled(true);
         mMap.getUiSettings().setMyLocationButtonEnabled(true);
 
-        // Obtenemos la última ubicación conocida
         fusedLocationClient.getLastLocation().addOnSuccessListener(requireActivity(), location -> {
             if (location != null) {
                 LatLng miUbicacion = new LatLng(location.getLatitude(), location.getLongitude());
-                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(miUbicacion, 15f));
+                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(miUbicacion, 14f));
+
+                if (centroSeleccionado != null) {
+                    colocarMarkerCentro();
+                    recalcularRuta();
+                }
             } else {
                 centrarEnBilbao();
             }
         });
+    }
+
+    private void colocarMarkerCentro() {
+        if (mMap == null || centroSeleccionado == null) return;
+
+        if (markerCentro != null) markerCentro.remove();
+        markerCentro = mMap.addMarker(new MarkerOptions()
+                .position(centroSeleccionado)
+                .title(centroNombre)
+                .snippet(centroEntidad + " - " + centroUbicacion));
+    }
+
+    private void recalcularRuta() {
+        if (centroSeleccionado == null) return;
+
+        fusedLocationClient.getLastLocation().addOnSuccessListener(location -> {
+            if (location != null) {
+                pedirRutaYTiempo(location);
+            }
+        });
+    }
+
+    private void pedirRutaYTiempo(Location location) {
+        String origin = location.getLatitude() + "," + location.getLongitude();
+        String destination = centroSeleccionado.latitude + "," + centroSeleccionado.longitude;
+
+        String mode;
+        String transitMode = null;
+
+        switch (transporteActual) {
+            case "bus":
+                mode = "transit";
+                transitMode = "bus";
+                break;
+            case "tranvia":
+                mode = "transit";
+                transitMode = "tram";
+                break;
+            case "bici":
+                mode = "bicycling";
+                break;
+            default:
+                mode = "walking";
+        }
+
+        DirectionsApi api = GoogleMapsRetrofitClient.getClient().create(DirectionsApi.class);
+        api.getDirections(origin, destination, mode, transitMode, "TU_API_KEY")
+                .enqueue(new Callback<DirectionsResponse>() {
+                    @Override
+                    public void onResponse(Call<DirectionsResponse> call, Response<DirectionsResponse> response) {
+                        if (response.isSuccessful() && response.body() != null
+                                && response.body().routes != null && !response.body().routes.isEmpty()) {
+
+                            DirectionsResponse.Route route = response.body().routes.get(0);
+                            if (route.legs == null || route.legs.isEmpty()) return;
+
+                            String tiempo = route.legs.get(0).duration.text;
+
+                            if (markerCentro != null) {
+                                markerCentro.setSnippet(centroEntidad + " - " + centroUbicacion + "\nTiempo: " + tiempo);
+                                markerCentro.showInfoWindow();
+                            }
+
+                            if (rutaActual != null) rutaActual.remove();
+                            if (route.overview_polyline != null && route.overview_polyline.points != null) {
+                                List<LatLng> puntos = decodePolyline(route.overview_polyline.points);
+                                rutaActual = mMap.addPolyline(new PolylineOptions().addAll(puntos));
+                            }
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Call<DirectionsResponse> call, Throwable t) { }
+                });
     }
 
     private void centrarEnBilbao() {
@@ -103,36 +220,35 @@ public class MapaFragment extends Fragment implements OnMapReadyCallback {
         }
     }
 
-    private void cargarCentrosEnMapa() {
-        CentroRepository repo = new CentroRepository();
+    private List<LatLng> decodePolyline(String encoded) {
+        List<LatLng> poly = new ArrayList<>();
+        int index = 0, len = encoded.length();
+        int lat = 0, lng = 0;
 
-        // Llamamos al método que creó tu compañero
-        repo.obtenerTodos().addOnSuccessListener(queryDocumentSnapshots -> {
-            for (DocumentSnapshot document : queryDocumentSnapshots) {
-                // Traducimos el JSON de Firebase a nuestra clase Java
-                CentroUniversitario centro = document.toObject(CentroUniversitario.class);
+        while (index < len) {
+            int b, shift = 0, result = 0;
+            do {
+                b = encoded.charAt(index++) - 63;
+                result |= (b & 0x1f) << shift;
+                shift += 5;
+            } while (b >= 0x20);
+            int dlat = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+            lat += dlat;
 
-                if (centro != null && mMap != null) {
-                    LatLng posicion = new LatLng(centro.latitud, centro.longitud);
+            shift = 0;
+            result = 0;
+            do {
+                b = encoded.charAt(index++) - 63;
+                result |= (b & 0x1f) << shift;
+                shift += 5;
+            } while (b >= 0x20);
+            int dlng = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+            lng += dlng;
 
-                    // Le damos un color distinto a cada universidad para sumar puntos en Diseño
-                    float colorPin = BitmapDescriptorFactory.HUE_RED; // EHU (Rojo por defecto)
-                    if ("Deusto".equals(centro.entidad)) {
-                        colorPin = BitmapDescriptorFactory.HUE_AZURE; // Azul
-                    } else if ("MU".equals(centro.entidad)) {
-                        colorPin = BitmapDescriptorFactory.HUE_GREEN; // Verde
-                    }
+            LatLng p = new LatLng(lat / 1E5, lng / 1E5);
+            poly.add(p);
+        }
 
-                    // Creamos el "Pincito" y lo añadimos al mapa
-                    mMap.addMarker(new MarkerOptions()
-                            .position(posicion)
-                            .title(centro.nombre)
-                            .snippet(centro.entidad + " - " + centro.ubicacion) // El subtítulo al tocar el pin
-                            .icon(BitmapDescriptorFactory.defaultMarker(colorPin)));
-                }
-            }
-        }).addOnFailureListener(e -> {
-            Toast.makeText(getContext(), "Error cargando los centros del mapa", Toast.LENGTH_SHORT).show();
-        });
+        return poly;
     }
 }
