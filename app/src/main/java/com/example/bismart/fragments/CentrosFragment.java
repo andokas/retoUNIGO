@@ -20,6 +20,8 @@ import com.example.bismart.repositories.CentroRepository;
 import com.example.bismart.ui.CentroAdapter;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
 import com.google.firebase.firestore.DocumentSnapshot;
 
 import java.util.ArrayList;
@@ -50,6 +52,17 @@ public class CentrosFragment extends Fragment {
                 return true;
             }
         });
+
+        // NUEVO: Escuchar los botones de transporte para recalcular distancias y tiempos
+        ChipGroup chipGroup = view.findViewById(R.id.chipGroupTransporteLista);
+        if (chipGroup != null) {
+            chipGroup.setOnCheckedStateChangeListener((group, checkedIds) -> {
+                if (!checkedIds.isEmpty() && adapter != null) {
+                    Chip chip = view.findViewById(checkedIds.get(0));
+                    adapter.setModoTransporte(chip.getText().toString());
+                }
+            });
+        }
 
         obtenerUbicacionYCentros();
 

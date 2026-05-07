@@ -20,21 +20,19 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // 1. EL PORTERO: Comprobar si hay un usuario logueado en Firebase
+        // Comprobamos si hay sesión en Firebase
         FirebaseAuth mAuth = FirebaseAuth.getInstance();
-
         FirebaseUser currentUser = mAuth.getCurrentUser();
 
         if (currentUser == null) {
-            // El usuario NO ha iniciado sesión. Lo mandamos al Login.
+            // No hay sesión: Al Login y cerramos esta pantalla
             Intent intent = new Intent(this, LoginActivity.class);
             startActivity(intent);
-            // Cerramos el MainActivity para que no pueda volver atrás con el botón físico
             finish();
-            return; // Detenemos la ejecución del resto del código de esta pantalla
+            return;
         }
+        // ---------------------------------------------------------
 
-        // 2. SI HAY USUARIO: Cargamos la interfaz normal de la aplicación
         setContentView(R.layout.activity_main);
 
         // Poblar centros solo la primera vez
@@ -47,7 +45,6 @@ public class MainActivity extends AppCompatActivity {
         // Fragment inicial
         cargarFragment(new MapaFragment());
 
-        // Configuración de la navegación inferior
         BottomNavigationView bottomNav = findViewById(R.id.bottomNav);
         bottomNav.setOnItemSelectedListener(item -> {
             Fragment fragment;

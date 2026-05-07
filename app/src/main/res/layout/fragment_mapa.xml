@@ -1,13 +1,10 @@
-<?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Mapa -->
-    <androidx.fragment.app.FragmentContainerView
-        android:id="@+id/map"
-        android:name="com.google.android.gms.maps.SupportMapFragment"
+    <org.osmdroid.views.MapView
+        android:id="@+id/mapView"
         android:layout_width="0dp"
         android:layout_height="0dp"
         app:layout_constraintTop_toTopOf="parent"
@@ -15,14 +12,14 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- Chips de transporte -->
     <com.google.android.material.chip.ChipGroup
         android:id="@+id/chipGroupTransporte"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:padding="8dp"
         app:singleSelection="true"
         app:selectionRequired="true"
+        app:chipSpacingHorizontal="8dp"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
@@ -49,6 +46,20 @@
             android:text="Bus" />
 
         <com.google.android.material.chip.Chip
+            android:id="@+id/chipMetro"
+            style="@style/Widget.MaterialComponents.Chip.Choice"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Metro" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipTren"
+            style="@style/Widget.MaterialComponents.Chip.Choice"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Tren" />
+
+        <com.google.android.material.chip.Chip
             android:id="@+id/chipTranvia"
             style="@style/Widget.MaterialComponents.Chip.Choice"
             android:layout_width="wrap_content"
@@ -56,5 +67,4 @@
             android:text="Tranvía" />
 
     </com.google.android.material.chip.ChipGroup>
-
 </androidx.constraintlayout.widget.ConstraintLayout>

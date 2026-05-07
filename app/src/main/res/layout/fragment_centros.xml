@@ -8,7 +8,7 @@
 
     <!-- Selector de transporte -->
     <com.google.android.material.chip.ChipGroup
-        android:id="@+id/chipGroupTransporte"
+        android:id="@+id/chipGroupTransporteLista"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:padding="8dp"
@@ -19,7 +19,7 @@
             android:id="@+id/chipPie"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="🚶 A pie"
+            android:text="A pie"
             android:checkable="true"
             style="@style/Widget.MaterialComponents.Chip.Filter"/>
 
@@ -27,7 +27,7 @@
             android:id="@+id/chipBici"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="🚲 Bici"
+            android:text="Bici"
             android:checkable="true"
             style="@style/Widget.MaterialComponents.Chip.Filter"/>
 
@@ -35,7 +35,7 @@
             android:id="@+id/chipBus"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="🚌 Bus"
+            android:text="Bus"
             android:checkable="true"
             style="@style/Widget.MaterialComponents.Chip.Filter"/>
 
@@ -43,9 +43,25 @@
             android:id="@+id/chipTranvia"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="🚋 Tranvía"
+            android:text="Tranvía"
             android:checkable="true"
             style="@style/Widget.MaterialComponents.Chip.Filter"/>
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipMetro"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Metro"
+            android:checkable="true"
+            style="@style/Widget.MaterialComponents.Chip.Filter"/>/>
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipTren"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Tren"
+            android:checkable="true"
+            style="@style/Widget.MaterialComponents.Chip.Filter"/>/>
 
     </com.google.android.material.chip.ChipGroup>
 
