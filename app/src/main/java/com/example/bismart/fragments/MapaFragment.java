@@ -185,15 +185,31 @@ public class MapaFragment extends Fragment {
         Log.d("RUTA_DEBUG", "Intentando calcular ruta. Origen: " + origen + " | Destino: " + destino);
 
         String modo = "transit";
-        String modoTransito = "";
+        String modoTransito = null; // Cambiado de "" a null
 
         switch (medioTransporte) {
-            case "pie": modo = "walking"; break;
-            case "bici": modo = "bicycling"; break;
-            case "bus": modo = "transit"; modoTransito = "bus"; break;
-            case "metro": modo = "transit"; modoTransito = "subway"; break;
-            case "tren": modo = "transit"; modoTransito = "train"; break;
-            case "tranvia": modo = "transit"; modoTransito = "tram"; break;
+            case "pie":
+                modo = "walking";
+                break;
+            case "bici":
+                modo = "bicycling";
+                break;
+            case "bus":
+                modo = "transit";
+                modoTransito = "bus";
+                break;
+            case "metro":
+                modo = "transit";
+                modoTransito = "subway";
+                break;
+            case "tren":
+                modo = "transit";
+                modoTransito = "train";
+                break;
+            case "tranvia":
+                modo = "transit";
+                modoTransito = "tram";
+                break;
         }
 
         // Clave API de Google Cloud
@@ -207,24 +223,24 @@ public class MapaFragment extends Fragment {
             @Override
             public void onResponse(Call<DirectionsResponse> call, Response<DirectionsResponse> response) {
                 if (response.isSuccessful() && response.body() != null) {
-                    if (response.body().routes != null && !response.body().routes.isEmpty()) {
-                        Log.d("RUTA_DEBUG", "¡Ruta encontrada con éxito!");
+                    // LEEMOS EL STATUS DE GOOGLE
+                    String status = response.body().status;
+                    Log.d("RUTA_DEBUG", "Status de Google: " + status);
+
+                    if ("OK".equals(status) && response.body().routes != null && !response.body().routes.isEmpty()) {
+                        Log.d("RUTA_DEBUG", "¡Ruta encontrada!");
                         String tiempoTexto = response.body().routes.get(0).legs.get(0).duration.text;
                         String polylineCodificada = response.body().routes.get(0).overview_polyline.points;
 
-                        Toast.makeText(getContext(), "Tiempo estimado: " + tiempoTexto, Toast.LENGTH_LONG).show();
+                        Toast.makeText(getContext(), "Llegarás en: " + tiempoTexto, Toast.LENGTH_LONG).show();
                         dibujarRutaEnMapa(polylineCodificada);
                     } else {
-                        Log.e("RUTA_DEBUG", "Google respondió bien, pero el array de rutas está vacío. Quizás no hay ruta posible en ese transporte.");
-                        Toast.makeText(getContext(), "No se encontró ruta para este transporte", Toast.LENGTH_SHORT).show();
-                    }
-                } else {
-                    // Leemos el mensaje de error exacto de Google
-                    try {
-                        String errorBody = response.errorBody() != null ? response.errorBody().string() : "Error desconocido";
-                        Log.e("RUTA_DEBUG", "Error de Google (Código " + response.code() + "): " + errorBody);
-                    } catch (Exception e) {
-                        Log.e("RUTA_DEBUG", "No se pudo leer el errorBody");
+                        // Aquí sabrás exactamente qué falla
+                        Log.e("RUTA_DEBUG", "Fallo. Status: " + status);
+                        String mensaje = "No hay ruta disponible";
+                        if ("REQUEST_DENIED".equals(status)) mensaje = "Error de permisos API (Revisa Google Cloud)";
+
+                        Toast.makeText(getContext(), mensaje, Toast.LENGTH_SHORT).show();
                     }
                 }
             }
