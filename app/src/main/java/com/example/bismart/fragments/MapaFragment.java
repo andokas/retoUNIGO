@@ -38,6 +38,7 @@ public class MapaFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         Configuration.getInstance().setUserAgentValue(requireContext().getPackageName());
         return inflater.inflate(R.layout.fragment_mapa, container, false);
+        //hola
     }
 
     @Override
