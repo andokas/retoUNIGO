@@ -8,6 +8,7 @@ import android.graphics.PorterDuff;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -29,10 +30,29 @@ import org.osmdroid.views.overlay.Marker;
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider;
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay;
 
+import com.example.bismart.network.DirectionsApi;
+import com.example.bismart.network.DirectionsResponse;
+import com.example.bismart.network.GoogleMapsRetrofitClient;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import org.osmdroid.views.overlay.Polyline;
+
+import android.graphics.Color;
+import android.widget.Toast;
+import com.google.android.material.chip.ChipGroup;
+
+import java.util.ArrayList;
+import java.util.List;
+
 public class MapaFragment extends Fragment {
 
     private MapView mapView;
     private MyLocationNewOverlay locationOverlay; // El puntito azul
+    private Polyline rutaDibujadaActual = null;
+    private org.osmdroid.util.GeoPoint ubicacionUsuario = null;   // Tu GPS
+    private org.osmdroid.util.GeoPoint destinoSeleccionado = null; // La universidad elegida
+
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -48,16 +68,51 @@ public class MapaFragment extends Fragment {
         mapView.setTileSource(TileSourceFactory.MAPNIK);
         mapView.setMultiTouchControls(true);
 
-        // 1. Configurar Bilbao como centro inicial
-        GeoPoint bilbao = new GeoPoint(43.2630, -2.9350);
-        mapView.getController().setZoom(13.0);
-        mapView.getController().setCenter(bilbao);
-
-        // 2. Activar el puntito azul (Ubicación real)
+        // 1. Activar el puntito azul (Ubicación real)
         activarUbicacionReal();
 
-        // 3. Cargar marcadores con colores
+        // 2. Comprobar si venimos de la lista con una facultad seleccionada
+        Bundle args = getArguments();
+        if (args != null && args.containsKey("lat")) {
+            double lat = args.getDouble("lat");
+            double lng = args.getDouble("lng");
+            String nombre = args.getString("nombre");
+
+            destinoSeleccionado = new GeoPoint(lat, lng);
+
+            // Centramos el mapa en la facultad
+            mapView.getController().setZoom(16.0);
+            mapView.getController().setCenter(destinoSeleccionado);
+            Toast.makeText(getContext(), "Destino: " + nombre + "\nElige transporte arriba", Toast.LENGTH_LONG).show();
+        } else {
+            // Si abrimos el mapa normal, centramos en Bilbao
+            GeoPoint bilbao = new GeoPoint(43.2630, -2.9350);
+            mapView.getController().setZoom(13.0);
+            mapView.getController().setCenter(bilbao);
+        }
+
+        // 3. Cargar marcadores
         cargarMarcadores();
+
+        // 4. ESCUCHAR LOS BOTONES DE TRANSPORTE
+        ChipGroup chipGroup = view.findViewById(R.id.chipGroupTransporte);
+        if (chipGroup != null) {
+            chipGroup.setOnCheckedStateChangeListener((group, checkedIds) -> {
+                if (checkedIds.isEmpty()) return;
+
+                int idSeleccionado = checkedIds.get(0);
+                String medio = "";
+
+                if (idSeleccionado == R.id.chipPie) medio = "pie";
+                else if (idSeleccionado == R.id.chipBici) medio = "bici";
+                else if (idSeleccionado == R.id.chipBus) medio = "bus";
+                else if (idSeleccionado == R.id.chipMetro) medio = "metro";
+                else if (idSeleccionado == R.id.chipTren) medio = "tren";
+                else if (idSeleccionado == R.id.chipTranvia) medio = "tranvia";
+
+                calcularRuta(medio); // ¡AHORA SÍ LLAMAMOS A LA RUTA!
+            });
+        }
     }
 
     private void activarUbicacionReal() {
@@ -109,4 +164,126 @@ public class MapaFragment extends Fragment {
 
     @Override public void onResume() { super.onResume(); mapView.onResume(); }
     @Override public void onPause() { super.onPause(); mapView.onPause(); }
+
+    private void calcularRuta(String medioTransporte) {
+        if (locationOverlay != null && locationOverlay.getMyLocation() != null) {
+            ubicacionUsuario = locationOverlay.getMyLocation();
+        } else {
+            Log.e("RUTA_DEBUG", "GPS no disponible. Usando Casco Viejo por defecto.");
+            ubicacionUsuario = new GeoPoint(43.2598, -2.9244);
+        }
+
+        if (destinoSeleccionado == null) {
+            Toast.makeText(getContext(), "Error: Vuelve a la lista y selecciona una universidad", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // 1. Preparamos las coordenadas
+        String origen = ubicacionUsuario.getLatitude() + "," + ubicacionUsuario.getLongitude();
+        String destino = destinoSeleccionado.getLatitude() + "," + destinoSeleccionado.getLongitude();
+
+        Log.d("RUTA_DEBUG", "Intentando calcular ruta. Origen: " + origen + " | Destino: " + destino);
+
+        String modo = "transit";
+        String modoTransito = "";
+
+        switch (medioTransporte) {
+            case "pie": modo = "walking"; break;
+            case "bici": modo = "bicycling"; break;
+            case "bus": modo = "transit"; modoTransito = "bus"; break;
+            case "metro": modo = "transit"; modoTransito = "subway"; break;
+            case "tren": modo = "transit"; modoTransito = "train"; break;
+            case "tranvia": modo = "transit"; modoTransito = "tram"; break;
+        }
+
+        // Clave API de Google Cloud
+        String apiKey = "AIzaSyDEUbEgIFSheOAVMDPV-wiSIcNN_oTi0KA";
+
+        // 3. Hacemos la llamada con Retrofit
+        DirectionsApi api = GoogleMapsRetrofitClient.getClient().create(DirectionsApi.class);
+        Call<DirectionsResponse> call = api.getDirections(origen, destino, modo, modoTransito, apiKey);
+
+        call.enqueue(new Callback<DirectionsResponse>() {
+            @Override
+            public void onResponse(Call<DirectionsResponse> call, Response<DirectionsResponse> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    if (response.body().routes != null && !response.body().routes.isEmpty()) {
+                        Log.d("RUTA_DEBUG", "¡Ruta encontrada con éxito!");
+                        String tiempoTexto = response.body().routes.get(0).legs.get(0).duration.text;
+                        String polylineCodificada = response.body().routes.get(0).overview_polyline.points;
+
+                        Toast.makeText(getContext(), "Tiempo estimado: " + tiempoTexto, Toast.LENGTH_LONG).show();
+                        dibujarRutaEnMapa(polylineCodificada);
+                    } else {
+                        Log.e("RUTA_DEBUG", "Google respondió bien, pero el array de rutas está vacío. Quizás no hay ruta posible en ese transporte.");
+                        Toast.makeText(getContext(), "No se encontró ruta para este transporte", Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    // Leemos el mensaje de error exacto de Google
+                    try {
+                        String errorBody = response.errorBody() != null ? response.errorBody().string() : "Error desconocido";
+                        Log.e("RUTA_DEBUG", "Error de Google (Código " + response.code() + "): " + errorBody);
+                    } catch (Exception e) {
+                        Log.e("RUTA_DEBUG", "No se pudo leer el errorBody");
+                    }
+                }
+            }
+
+            @Override
+            public void onFailure(Call<DirectionsResponse> call, Throwable t) {
+                Log.e("RUTA_DEBUG", "Fallo de conexión crítico: " + t.getMessage());
+            }
+        });
+    }
+
+    private void dibujarRutaEnMapa(String polylineCodificada) {
+        // 1. Desciframos la ruta
+        List<GeoPoint> puntosDeRuta = decodificarPolyline(polylineCodificada);
+
+        // 2. Si ya había una ruta pintada antes, la borramos para no superponerlas
+        if (rutaDibujadaActual != null) {
+            mapView.getOverlays().remove(rutaDibujadaActual);
+        }
+
+        // 3. Creamos la línea (Polyline)
+        rutaDibujadaActual = new Polyline();
+        rutaDibujadaActual.setPoints(puntosDeRuta);
+        rutaDibujadaActual.setColor(Color.parseColor("#1A73E8"));
+        rutaDibujadaActual.setWidth(12.0f); // Grosor de la línea
+
+        // 4. La añadimos al mapa y refrescamos
+        mapView.getOverlays().add(rutaDibujadaActual);
+        mapView.invalidate();
+    }
+
+    private List<GeoPoint> decodificarPolyline(String encoded) {
+        List<GeoPoint> poly = new ArrayList<>();
+        int index = 0, len = encoded.length();
+        int lat = 0, lng = 0;
+
+        while (index < len) {
+            int b, shift = 0, result = 0;
+            do {
+                b = encoded.charAt(index++) - 63;
+                result |= (b & 0x1f) << shift;
+                shift += 5;
+            } while (b >= 0x20);
+            int dlat = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+            lat += dlat;
+
+            shift = 0;
+            result = 0;
+            do {
+                b = encoded.charAt(index++) - 63;
+                result |= (b & 0x1f) << shift;
+                shift += 5;
+            } while (b >= 0x20);
+            int dlng = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+            lng += dlng;
+
+            GeoPoint p = new GeoPoint((((double) lat / 1E5)), (((double) lng / 1E5)));
+            poly.add(p);
+        }
+        return poly;
+    }
 }
