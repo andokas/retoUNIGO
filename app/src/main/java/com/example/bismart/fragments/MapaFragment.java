@@ -265,7 +265,7 @@ public class MapaFragment extends Fragment {
         rutaDibujadaActual = new Polyline();
         rutaDibujadaActual.setPoints(puntosDeRuta);
         rutaDibujadaActual.setColor(Color.parseColor("#1A73E8"));
-        rutaDibujadaActual.setWidth(12.0f); // Grosor de la línea
+        rutaDibujadaActual.setWidth(12.0f); // Grosor
 
         // 4. La añadimos al mapa y refrescamos
         mapView.getOverlays().add(rutaDibujadaActual);
