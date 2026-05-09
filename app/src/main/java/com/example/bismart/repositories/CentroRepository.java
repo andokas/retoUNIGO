@@ -31,10 +31,15 @@ public class CentroRepository {
 
     // Poblar Firestore con todos los centros (llamar solo una vez)
     public void poblarCentros() {
-        List<CentroUniversitario> centros = getCentrosIniciales();
-        for (CentroUniversitario centro : centros) {
-            db.collection(COLECCION).add(centro);
-        }
+        db.collection(COLECCION).limit(1).get()
+                .addOnSuccessListener(querySnapshot -> {
+                    if (querySnapshot.isEmpty()) {
+                        // Solo inserta si la colección está vacía
+                        for (CentroUniversitario centro : getCentrosIniciales()) {
+                            db.collection(COLECCION).add(centro);
+                        }
+                    }
+                });
     }
 
     private List<CentroUniversitario> getCentrosIniciales() {

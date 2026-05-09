@@ -17,15 +17,19 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.bismart.R;
 import com.example.bismart.models.CentroUniversitario;
 import com.example.bismart.repositories.CentroRepository;
+import com.example.bismart.repositories.UsuarioRepository;
 import com.example.bismart.ui.CentroAdapter;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
+import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentSnapshot;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class CentrosFragment extends Fragment {
 
@@ -34,16 +38,23 @@ public class CentrosFragment extends Fragment {
     private List<CentroUniversitario> listaCentros = new ArrayList<>();
     private FusedLocationProviderClient fusedLocationClient;
     private Location miUbicacion;
+    private Set<String> favoritosSet = new HashSet<>();
+    private UsuarioRepository usuarioRepository;
+    private String uidActual;
 
     @Nullable
     @Override
-    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
+                             @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_centros, container, false);
 
         recyclerView = view.findViewById(R.id.recyclerViewCentros);
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity());
+        usuarioRepository = new UsuarioRepository();
+        uidActual = FirebaseAuth.getInstance().getCurrentUser().getUid();
 
+        // Buscador
         SearchView searchView = view.findViewById(R.id.searchView);
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override public boolean onQueryTextSubmit(String query) { return false; }
@@ -53,19 +64,19 @@ public class CentrosFragment extends Fragment {
             }
         });
 
-        // NUEVO: Escuchar los botones de transporte para recalcular distancias y tiempos
-        ChipGroup chipGroup = view.findViewById(R.id.chipGroupTransporteLista);
-        if (chipGroup != null) {
-            chipGroup.setOnCheckedStateChangeListener((group, checkedIds) -> {
-                if (!checkedIds.isEmpty() && adapter != null) {
-                    Chip chip = view.findViewById(checkedIds.get(0));
-                    adapter.setModoTransporte(chip.getText().toString());
-                }
-            });
-        }
+        // Chips de universidad
+        ChipGroup chipUniversidad = view.findViewById(R.id.chipGroupUniversidad);
+        chipUniversidad.setOnCheckedStateChangeListener((group, checkedIds) -> {
+            if (checkedIds.isEmpty() || adapter == null) return;
+            int id = checkedIds.get(0);
+            if (id == R.id.chipTodas)      adapter.filtrarPorEntidad("Todas");
+            else if (id == R.id.chipEHU)   adapter.filtrarPorEntidad("EHU");
+            else if (id == R.id.chipDeusto) adapter.filtrarPorEntidad("Deusto");
+            else if (id == R.id.chipMU)    adapter.filtrarPorEntidad("MU");
+            else if (id == R.id.chipFavoritos) adapter.mostrarSoloFavoritos(favoritosSet);
+        });
 
         obtenerUbicacionYCentros();
-
         return view;
     }
 
@@ -73,8 +84,21 @@ public class CentrosFragment extends Fragment {
     private void obtenerUbicacionYCentros() {
         fusedLocationClient.getLastLocation().addOnSuccessListener(location -> {
             miUbicacion = location;
-            descargarCentrosDeFirebase();
+            cargarFavoritosYCentros();
         });
+    }
+
+    private void cargarFavoritosYCentros() {
+        // Primero cargamos los favoritos, luego los centros
+        usuarioRepository.obtenerFavoritos(uidActual)
+                .addOnSuccessListener(querySnapshot -> {
+                    favoritosSet.clear();
+                    for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
+                        favoritosSet.add(doc.getId());
+                    }
+                    descargarCentrosDeFirebase();
+                })
+                .addOnFailureListener(e -> descargarCentrosDeFirebase());
     }
 
     private void descargarCentrosDeFirebase() {
@@ -86,7 +110,6 @@ public class CentrosFragment extends Fragment {
             }
 
             adapter = new CentroAdapter(listaCentros, miUbicacion, centro -> {
-                // Abrir MapaFragment con el centro seleccionado
                 Bundle args = new Bundle();
                 args.putDouble("lat", centro.latitud);
                 args.putDouble("lng", centro.longitud);
@@ -101,6 +124,20 @@ public class CentrosFragment extends Fragment {
                         .beginTransaction()
                         .replace(R.id.fragmentContainer, mapaFragment)
                         .commit();
+            });
+
+            // Pasar favoritos al adapter
+            adapter.setFavoritos(favoritosSet);
+
+            // Listener para guardar/borrar favoritos en Firestore
+            adapter.setFavoritoListener((centro, esFavorito) -> {
+                if (esFavorito) {
+                    favoritosSet.add(centro.nombre);
+                    usuarioRepository.añadirFavorito(uidActual, centro);
+                } else {
+                    favoritosSet.remove(centro.nombre);
+                    usuarioRepository.eliminarFavorito(uidActual, centro.nombre);
+                }
             });
 
             recyclerView.setAdapter(adapter);

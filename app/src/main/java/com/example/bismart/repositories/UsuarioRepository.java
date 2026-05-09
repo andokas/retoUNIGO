@@ -1,10 +1,12 @@
 package com.example.bismart.repositories;
 
+import com.example.bismart.models.CentroUniversitario;
 import com.example.bismart.models.Usuario;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.QuerySnapshot;
 
 public class UsuarioRepository {
 
@@ -42,5 +44,31 @@ public class UsuarioRepository {
         return db.collection(COLECCION)
                 .document(uid)
                 .update("idioma", idioma);
+    }
+
+    // Obtener favoritos del usuario
+    public Task<QuerySnapshot> obtenerFavoritos(String uid) {
+        return db.collection(COLECCION)
+                .document(uid)
+                .collection("favoritos")
+                .get();
+    }
+
+    // Añadir favorito
+    public Task<Void> añadirFavorito(String uid, CentroUniversitario centro) {
+        return db.collection(COLECCION)
+                .document(uid)
+                .collection("favoritos")
+                .document(centro.nombre)
+                .set(centro);
+    }
+
+    // Eliminar favorito
+    public Task<Void> eliminarFavorito(String uid, String nombreCentro) {
+        return db.collection(COLECCION)
+                .document(uid)
+                .collection("favoritos")
+                .document(nombreCentro)
+                .delete();
     }
 }

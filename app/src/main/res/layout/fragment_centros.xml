@@ -6,62 +6,56 @@
     android:orientation="vertical"
     android:background="#F5F5F5">
 
-    <!-- Selector de transporte -->
+    <!-- Filtro por universidad -->
     <com.google.android.material.chip.ChipGroup
-        android:id="@+id/chipGroupTransporteLista"
+        android:id="@+id/chipGroupUniversidad"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="8dp"
-        app:singleSelection="true"
-        app:selectionRequired="true">
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:paddingBottom="4dp"
+        app:singleSelection="true">
 
         <com.google.android.material.chip.Chip
-            android:id="@+id/chipPie"
+            android:id="@+id/chipTodas"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="A pie"
+            android:text="Todas"
+            android:checkable="true"
+            android:checked="true"
+            style="@style/Widget.MaterialComponents.Chip.Filter"/>
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipEHU"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="EHU"
             android:checkable="true"
             style="@style/Widget.MaterialComponents.Chip.Filter"/>
 
         <com.google.android.material.chip.Chip
-            android:id="@+id/chipBici"
+            android:id="@+id/chipDeusto"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Bici"
+            android:text="Deusto"
             android:checkable="true"
             style="@style/Widget.MaterialComponents.Chip.Filter"/>
 
         <com.google.android.material.chip.Chip
-            android:id="@+id/chipBus"
+            android:id="@+id/chipMU"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Bus"
+            android:text="Mondragon"
             android:checkable="true"
             style="@style/Widget.MaterialComponents.Chip.Filter"/>
 
         <com.google.android.material.chip.Chip
-            android:id="@+id/chipTranvia"
+            android:id="@+id/chipFavoritos"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Tranvía"
+            android:text="⭐ Favoritos"
             android:checkable="true"
             style="@style/Widget.MaterialComponents.Chip.Filter"/>
-
-        <com.google.android.material.chip.Chip
-            android:id="@+id/chipMetro"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Metro"
-            android:checkable="true"
-            style="@style/Widget.MaterialComponents.Chip.Filter"/>/>
-
-        <com.google.android.material.chip.Chip
-            android:id="@+id/chipTren"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Tren"
-            android:checkable="true"
-            style="@style/Widget.MaterialComponents.Chip.Filter"/>/>
 
     </com.google.android.material.chip.ChipGroup>
 
