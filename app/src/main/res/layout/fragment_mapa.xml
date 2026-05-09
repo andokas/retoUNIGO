@@ -114,7 +114,7 @@
                     android:layout_width="24dp"
                     android:layout_height="24dp"
                     android:src="@android:drawable/arrow_up_float"
-                    android:tint="#FFFFFF"/>
+                    app:tint="#FFFFFF" />
 
             </LinearLayout>
 
