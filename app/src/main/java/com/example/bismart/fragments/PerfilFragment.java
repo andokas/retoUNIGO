@@ -24,8 +24,8 @@ import com.google.firebase.auth.FirebaseUser;
 public class PerfilFragment extends Fragment {
 
     private TextView tvNombre, tvEmail;
-    private RadioGroup radioGroup;
-    private MaterialButton btnGuardar, btnCerrarSesion;
+    private RadioGroup radioGroupTransporte, radioGroupIdioma;
+    private MaterialButton btnGuardarTransporte, btnGuardarIdioma, btnCerrarSesion;
     private UsuarioRepository usuarioRepository;
     private String uidActual;
 
@@ -36,8 +36,10 @@ public class PerfilFragment extends Fragment {
 
         tvNombre = view.findViewById(R.id.tvNombreUsuario);
         tvEmail = view.findViewById(R.id.tvEmailUsuario);
-        radioGroup = view.findViewById(R.id.radioGroupTransporte);
-        btnGuardar = view.findViewById(R.id.btnGuardarTransporte);
+        radioGroupTransporte = view.findViewById(R.id.radioGroupTransporte);
+        radioGroupIdioma = view.findViewById(R.id.radioGroupIdioma);
+        btnGuardarTransporte = view.findViewById(R.id.btnGuardarTransporte);
+        btnGuardarIdioma = view.findViewById(R.id.btnGuardarIdioma);
         btnCerrarSesion = view.findViewById(R.id.btnCerrarSesion);
 
         usuarioRepository = new UsuarioRepository();
@@ -47,44 +49,71 @@ public class PerfilFragment extends Fragment {
             uidActual = user.getUid();
             tvNombre.setText(user.getDisplayName() != null ? user.getDisplayName() : "Usuario");
             tvEmail.setText(user.getEmail());
-            cargarTransporteGuardado();
+            cargarPreferenciasGuardadas();
         }
 
-        btnGuardar.setOnClickListener(v -> guardarTransporte());
+        btnGuardarTransporte.setOnClickListener(v -> guardarTransporte());
+        btnGuardarIdioma.setOnClickListener(v -> guardarIdioma());
         btnCerrarSesion.setOnClickListener(v -> cerrarSesion());
 
         return view;
     }
 
-    private void cargarTransporteGuardado() {
+    private void cargarPreferenciasGuardadas() {
         usuarioRepository.obtenerUsuario(uidActual)
                 .addOnSuccessListener(doc -> {
-                    if (doc.exists()) {
-                        String transporte = doc.getString("transportePreferido");
-                        if (transporte == null) return;
+                    if (!doc.exists()) return;
+
+                    // Transporte
+                    String transporte = doc.getString("transportePreferido");
+                    if (transporte != null) {
                         switch (transporte) {
-                            case "pie":     radioGroup.check(R.id.radioPie);    break;
-                            case "bici":    radioGroup.check(R.id.radioBici);   break;
-                            case "bus":     radioGroup.check(R.id.radioBus);    break;
-                            case "tranvia": radioGroup.check(R.id.radioTranvia);break;
+                            case "pie":     radioGroupTransporte.check(R.id.radioPie);    break;
+                            case "bici":    radioGroupTransporte.check(R.id.radioBici);   break;
+                            case "bus":     radioGroupTransporte.check(R.id.radioBus);    break;
+                            case "tranvia": radioGroupTransporte.check(R.id.radioTranvia);break;
                         }
+                    }
+
+                    // Idioma
+                    String idioma = doc.getString("idioma");
+                    if (idioma != null) {
+                        switch (idioma) {
+                            case "es": radioGroupIdioma.check(R.id.radioEspanol); break;
+                            case "eu": radioGroupIdioma.check(R.id.radioEuskera); break;
+                            case "en": radioGroupIdioma.check(R.id.radioIngles);  break;
+                        }
+                    } else {
+                        // Español por defecto
+                        radioGroupIdioma.check(R.id.radioEspanol);
                     }
                 });
     }
 
     private void guardarTransporte() {
-        int selectedId = radioGroup.getCheckedRadioButtonId();
+        int selectedId = radioGroupTransporte.getCheckedRadioButtonId();
         if (selectedId == -1) {
             Toast.makeText(getContext(), "Selecciona un modo de transporte", Toast.LENGTH_SHORT).show();
             return;
         }
-
-        RadioButton selected = radioGroup.findViewById(selectedId);
-        String transporte = selected.getTag().toString();
-
+        String transporte = ((RadioButton) radioGroupTransporte.findViewById(selectedId)).getTag().toString();
         usuarioRepository.actualizarTransporte(uidActual, transporte)
                 .addOnSuccessListener(unused ->
-                        Toast.makeText(getContext(), "Preferencia guardada ✓", Toast.LENGTH_SHORT).show())
+                        Toast.makeText(getContext(), "Transporte guardado ✓", Toast.LENGTH_SHORT).show())
+                .addOnFailureListener(e ->
+                        Toast.makeText(getContext(), "Error al guardar", Toast.LENGTH_SHORT).show());
+    }
+
+    private void guardarIdioma() {
+        int selectedId = radioGroupIdioma.getCheckedRadioButtonId();
+        if (selectedId == -1) {
+            Toast.makeText(getContext(), "Selecciona un idioma", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        String idioma = ((RadioButton) radioGroupIdioma.findViewById(selectedId)).getTag().toString();
+        usuarioRepository.actualizarIdioma(uidActual, idioma)
+                .addOnSuccessListener(unused ->
+                        Toast.makeText(getContext(), "Idioma guardado ✓", Toast.LENGTH_SHORT).show())
                 .addOnFailureListener(e ->
                         Toast.makeText(getContext(), "Error al guardar", Toast.LENGTH_SHORT).show());
     }

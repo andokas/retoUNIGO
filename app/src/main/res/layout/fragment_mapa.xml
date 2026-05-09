@@ -1,4 +1,6 @@
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
@@ -10,8 +12,9 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintEnd_toEndOf="parent"/>
 
+    <!-- Chips de transporte arriba -->
     <com.google.android.material.chip.ChipGroup
         android:id="@+id/chipGroupTransporte"
         android:layout_width="match_parent"
@@ -29,42 +32,102 @@
             style="@style/Widget.MaterialComponents.Chip.Choice"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="A pie" />
+            android:text="🚶 A pie"/>
 
         <com.google.android.material.chip.Chip
             android:id="@+id/chipBici"
             style="@style/Widget.MaterialComponents.Chip.Choice"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Bici" />
+            android:text="🚲 Bici"/>
 
         <com.google.android.material.chip.Chip
             android:id="@+id/chipBus"
             style="@style/Widget.MaterialComponents.Chip.Choice"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Bus" />
+            android:text="🚌 Bus"/>
 
         <com.google.android.material.chip.Chip
             android:id="@+id/chipMetro"
             style="@style/Widget.MaterialComponents.Chip.Choice"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Metro" />
+            android:text="🚇 Metro"/>
 
         <com.google.android.material.chip.Chip
             android:id="@+id/chipTren"
             style="@style/Widget.MaterialComponents.Chip.Choice"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Tren" />
+            android:text="🚆 Tren"/>
 
         <com.google.android.material.chip.Chip
             android:id="@+id/chipTranvia"
             style="@style/Widget.MaterialComponents.Chip.Choice"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Tranvía" />
+            android:text="🚋 Tranvía"/>
 
     </com.google.android.material.chip.ChipGroup>
+
+    <!-- Panel desplegable de indicaciones -->
+    <androidx.cardview.widget.CardView
+        android:id="@+id/cardIndicaciones"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="8dp"
+        android:layout_margin="12dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- Cabecera táctil para expandir/colapsar -->
+            <LinearLayout
+                android:id="@+id/headerIndicaciones"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="16dp"
+                android:gravity="center_vertical"
+                android:background="#C0392B">
+
+                <TextView
+                    android:id="@+id/tvResumenRuta"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textColor="#FFFFFF"
+                    android:textStyle="bold"
+                    android:textSize="14sp"
+                    android:text="Calculando ruta..."/>
+
+                <ImageView
+                    android:id="@+id/ivFlechaPanel"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@android:drawable/arrow_up_float"
+                    android:tint="#FFFFFF"/>
+
+            </LinearLayout>
+
+            <!-- Lista de pasos (colapsable) -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recyclerIndicaciones"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:maxHeight="250dp"
+                android:background="#FFFFFF"
+                android:visibility="gone"/>
+
+        </LinearLayout>
+    </androidx.cardview.widget.CardView>
+
 </androidx.constraintlayout.widget.ConstraintLayout>

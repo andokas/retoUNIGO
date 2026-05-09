@@ -4,6 +4,7 @@ public class Usuario {
     public String uid;
     public String email;
     public String transportePreferido;
+    public String idioma;
 
     public Usuario() {}
 

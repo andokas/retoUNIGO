@@ -130,6 +130,75 @@
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
+        <!-- Tarjeta de idioma -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="4dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Idioma de las indicaciones"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="#1A1A2E"
+                    android:layout_marginBottom="16dp"/>
+
+                <RadioGroup
+                    android:id="@+id/radioGroupIdioma"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <RadioButton
+                        android:id="@+id/radioEspanol"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="🇪🇸 Español"
+                        android:textSize="15sp"
+                        android:padding="8dp"
+                        android:tag="es"/>
+
+                    <RadioButton
+                        android:id="@+id/radioEuskera"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="🏴 Euskera"
+                        android:textSize="15sp"
+                        android:padding="8dp"
+                        android:tag="eu"/>
+
+                    <RadioButton
+                        android:id="@+id/radioIngles"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="🇬🇧 English"
+                        android:textSize="15sp"
+                        android:padding="8dp"
+                        android:tag="en"/>
+
+                </RadioGroup>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnGuardarIdioma"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:text="Guardar idioma"
+                    android:layout_marginTop="16dp"
+                    app:cornerRadius="12dp"/>
+
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
         <!-- Botón cerrar sesión -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnCerrarSesion"

@@ -36,4 +36,11 @@ public class UsuarioRepository {
                 .document(uid)
                 .update("transportePreferido", transporte);
     }
+
+    // Actualizar idioma
+    public Task<Void> actualizarIdioma(String uid, String idioma) {
+        return db.collection(COLECCION)
+                .document(uid)
+                .update("idioma", idioma);
+    }
 }

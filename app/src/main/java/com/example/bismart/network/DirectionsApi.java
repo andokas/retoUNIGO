@@ -11,6 +11,7 @@ public interface DirectionsApi {
             @Query("destination") String destination,
             @Query("mode") String mode,
             @Query("transit_mode") String transitMode,
+            @Query("language") String language, // ← NUEVO
             @Query("key") String key
     );
 }

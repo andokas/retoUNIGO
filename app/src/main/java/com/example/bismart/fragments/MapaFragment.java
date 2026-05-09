@@ -39,8 +39,14 @@ import retrofit2.Response;
 import org.osmdroid.views.overlay.Polyline;
 
 import android.graphics.Color;
+import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
+
+import com.example.bismart.repositories.UsuarioRepository;
+import com.example.bismart.ui.IndicacionesAdapter;
 import com.google.android.material.chip.ChipGroup;
+import com.google.firebase.auth.FirebaseAuth;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -52,6 +58,12 @@ public class MapaFragment extends Fragment {
     private Polyline rutaDibujadaActual = null;
     private org.osmdroid.util.GeoPoint ubicacionUsuario = null;   // Tu GPS
     private org.osmdroid.util.GeoPoint destinoSeleccionado = null; // La universidad elegida
+    private androidx.cardview.widget.CardView cardIndicaciones;
+    private TextView tvResumenRuta;
+    private androidx.recyclerview.widget.RecyclerView recyclerIndicaciones;
+    private ImageView ivFlechaPanel;
+    private boolean panelExpandido = false;
+    private String idiomaActual = "es"; // español por defecto
 
 
     @Override
@@ -67,6 +79,17 @@ public class MapaFragment extends Fragment {
         mapView = view.findViewById(R.id.mapView);
         mapView.setTileSource(TileSourceFactory.MAPNIK);
         mapView.setMultiTouchControls(true);
+        cardIndicaciones = view.findViewById(R.id.cardIndicaciones);
+        tvResumenRuta = view.findViewById(R.id.tvResumenRuta);
+        recyclerIndicaciones = view.findViewById(R.id.recyclerIndicaciones);
+        ivFlechaPanel = view.findViewById(R.id.ivFlechaPanel);
+
+        // Expandir/colapsar al tocar la cabecera
+        view.findViewById(R.id.headerIndicaciones).setOnClickListener(v -> {
+            panelExpandido = !panelExpandido;
+            recyclerIndicaciones.setVisibility(panelExpandido ? View.VISIBLE : View.GONE);
+            ivFlechaPanel.setRotation(panelExpandido ? 180f : 0f);
+        });
 
         // 1. Activar el puntito azul (Ubicación real)
         activarUbicacionReal();
@@ -113,6 +136,15 @@ public class MapaFragment extends Fragment {
                 calcularRuta(medio); // ¡AHORA SÍ LLAMAMOS A LA RUTA!
             });
         }
+
+        // 5. CARGAR IDIOMA
+        String uid = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        new UsuarioRepository().obtenerUsuario(uid)
+                .addOnSuccessListener(doc -> {
+                    if (doc.exists() && doc.getString("idioma") != null) {
+                        idiomaActual = doc.getString("idioma");
+                    }
+                });
     }
 
     private void activarUbicacionReal() {
@@ -201,31 +233,32 @@ public class MapaFragment extends Fragment {
 
         // 3. Hacemos la llamada con Retrofit
         DirectionsApi api = GoogleMapsRetrofitClient.getClient().create(DirectionsApi.class);
-        Call<DirectionsResponse> call = api.getDirections(origen, destino, modo, modoTransito, apiKey);
+        Call<DirectionsResponse> call = api.getDirections(origen, destino, modo, modoTransito, idiomaActual, apiKey);
 
         call.enqueue(new Callback<DirectionsResponse>() {
             @Override
             public void onResponse(Call<DirectionsResponse> call, Response<DirectionsResponse> response) {
-                if (response.isSuccessful() && response.body() != null) {
-                    if (response.body().routes != null && !response.body().routes.isEmpty()) {
-                        Log.d("RUTA_DEBUG", "¡Ruta encontrada con éxito!");
-                        String tiempoTexto = response.body().routes.get(0).legs.get(0).duration.text;
-                        String polylineCodificada = response.body().routes.get(0).overview_polyline.points;
+                if (response.isSuccessful() && response.body() != null &&
+                        response.body().routes != null && !response.body().routes.isEmpty()) {
 
-                        Toast.makeText(getContext(), "Tiempo estimado: " + tiempoTexto, Toast.LENGTH_LONG).show();
-                        dibujarRutaEnMapa(polylineCodificada);
-                    } else {
-                        Log.e("RUTA_DEBUG", "Google respondió bien, pero el array de rutas está vacío. Quizás no hay ruta posible en ese transporte.");
-                        Toast.makeText(getContext(), "No se encontró ruta para este transporte", Toast.LENGTH_SHORT).show();
-                    }
+                    DirectionsResponse.Leg leg = response.body().routes.get(0).legs.get(0);
+                    String polylineCodificada = response.body().routes.get(0).overview_polyline.points;
+
+                    // Mostrar resumen en la cabecera
+                    tvResumenRuta.setText("🕐 " + leg.duration.text + "  📍 " + leg.distance.text);
+                    cardIndicaciones.setVisibility(View.VISIBLE);
+
+                    // Cargar pasos en el RecyclerView
+                    recyclerIndicaciones.setLayoutManager(
+                            new androidx.recyclerview.widget.LinearLayoutManager(getContext()));
+                    recyclerIndicaciones.setAdapter(new IndicacionesAdapter(leg.steps));
+
+                    // Dibujar ruta
+                    dibujarRutaEnMapa(polylineCodificada);
+
                 } else {
-                    // Leemos el mensaje de error exacto de Google
-                    try {
-                        String errorBody = response.errorBody() != null ? response.errorBody().string() : "Error desconocido";
-                        Log.e("RUTA_DEBUG", "Error de Google (Código " + response.code() + "): " + errorBody);
-                    } catch (Exception e) {
-                        Log.e("RUTA_DEBUG", "No se pudo leer el errorBody");
-                    }
+                    Toast.makeText(getContext(), "No se encontró ruta para este transporte",
+                            Toast.LENGTH_SHORT).show();
                 }
             }
 

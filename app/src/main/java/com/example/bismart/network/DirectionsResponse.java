@@ -25,6 +25,23 @@ public class DirectionsResponse {
 
         @SerializedName("distance")
         public Distance distance;
+
+        @SerializedName("steps")
+        public List<Step> steps; // ← NUEVO
+    }
+
+    public static class Step {
+        @SerializedName("html_instructions")
+        public String htmlInstructions; // ← Texto con la indicación
+
+        @SerializedName("distance")
+        public Distance distance;
+
+        @SerializedName("duration")
+        public Duration duration;
+
+        @SerializedName("travel_mode")
+        public String travelMode;
     }
 
     public static class Duration {
