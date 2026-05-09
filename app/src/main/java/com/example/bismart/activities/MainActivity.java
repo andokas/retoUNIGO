@@ -7,6 +7,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
 
 import com.example.bismart.R;
+import com.example.bismart.fragments.ClimaFragment;
 import com.example.bismart.fragments.MapaFragment;
 import com.example.bismart.fragments.CentrosFragment;
 import com.example.bismart.fragments.PerfilFragment;
@@ -53,6 +54,8 @@ public class MainActivity extends AppCompatActivity {
                 fragment = new MapaFragment();
             } else if (id == R.id.nav_centros) {
                 fragment = new CentrosFragment();
+            } else if (id == R.id.nav_clima) {
+                fragment = new ClimaFragment();
             } else if (id == R.id.nav_perfil) {
                 fragment = new PerfilFragment();
             } else {

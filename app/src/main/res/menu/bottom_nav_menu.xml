@@ -12,6 +12,11 @@
         android:title="Centros"/>
 
     <item
+        android:id="@+id/nav_clima"
+        android:icon="@android:drawable/ic_menu_compass"
+        android:title="Clima"/>
+
+    <item
         android:id="@+id/nav_perfil"
         android:icon="@android:drawable/ic_menu_myplaces"
         android:title="Perfil"/>

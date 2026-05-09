@@ -73,4 +73,9 @@ dependencies {
     implementation(libs.firebase.messaging) // Notificaciones Push
     implementation(libs.firebase.storage)   // Almacenamiento de imágenes
 
+    // Euskalmet
+    implementation(libs.jjwt.api)
+    runtimeOnly(libs.jjwt.impl)
+    runtimeOnly(libs.jjwt.jackson)
+
 }
