@@ -5,7 +5,7 @@ import retrofit2.converter.gson.GsonConverterFactory;
 
 public class EuskalmetRetrofitClient {
     private static Retrofit retrofit;
-    private static final String BASE_URL = "https://api.euskadi.eus/euskalmet/";
+    private static final String BASE_URL= "https://api.euskadi.eus/";
 
     public static Retrofit getClient() {
         if (retrofit == null) {

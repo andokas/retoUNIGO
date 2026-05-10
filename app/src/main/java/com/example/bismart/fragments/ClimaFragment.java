@@ -32,7 +32,7 @@ import retrofit2.Response;
 public class ClimaFragment extends Fragment {
 
     // ID de la estación de Bilbao (Miribilla)
-    private static final String ESTACION_BILBAO = "B024";
+    private static final String ESTACION_BILBAO = "C039";
 
     private TextView tvTemperatura, tvLluvia, tvViento, tvHumedad, tvEstacion, tvAviso;
     private CardView cardAviso;
@@ -60,23 +60,24 @@ public class ClimaFragment extends Fragment {
 
     @SuppressLint("MissingPermission")
     private void cargarClima() {
+        try{
+        Log.d("CLIMA_DEBUG", "1. Iniciando carga de clima...");
         String token = EuskalmetTokenManager.getToken(
                 requireContext(),
                 "andonicastellanos07@gmail.com"
         );
 
         if (token == null) {
-            Log.e("CLIMA", "No se pudo generar el token");
+            Log.e("CLIMA_DEBUG", "ERROR CRÍTICO: El token es nulo. La llave privada no se está leyendo bien o está corrupta.");
             return;
         }
 
-        fusedLocationClient.getLastLocation().addOnSuccessListener(location -> {
-            if (location != null) {
-                buscarEstacionMasCercana(location, token);
-            } else {
-                obtenerDatosEstacion(ESTACION_BILBAO, "Bilbao - Miribilla", token);
-            }
-        });
+        Log.d("CLIMA_DEBUG", "2. Token generado con éxito. Saltando GPS temporalmente y pidiendo a Bilbao...");
+        // Para depurar, vamos directos a la estación de Bilbao sin esperar al GPS
+        obtenerDatosEstacion(ESTACION_BILBAO, "Bilbao - Miribilla", token);
+        } catch (Exception e) {
+            Log.e("CLIMA_DEBUG", "¡ATRAPADO EL CRASH AL CARGAR!: " + e.toString(), e);
+        }
     }
 
     private void buscarEstacionMasCercana(Location miUbicacion, String TOKEN) {
@@ -120,23 +121,38 @@ public class ClimaFragment extends Fragment {
 
     private void obtenerDatosEstacion(String estacionId, String nombreEstacion, String TOKEN) {
         if (tvEstacion != null) {
-            tvEstacion.setText("Estación: " + nombreEstacion);
+            tvEstacion.setText("Cargando: " + nombreEstacion + "...");
         }
 
         EuskalmetApi api = EuskalmetRetrofitClient.getClient().create(EuskalmetApi.class);
+        Log.d("CLIMA_DEBUG", "3. Enviando petición a la API de Euskalmet para estación: " + estacionId);
+
         api.getLastReading(TOKEN, estacionId).enqueue(new Callback<EuskalmetReadingResponse>() {
             @Override
-            public void onResponse(Call<EuskalmetReadingResponse> call,
-                                   Response<EuskalmetReadingResponse> response) {
-                if (response.isSuccessful() && response.body() != null
-                        && response.body().readings != null) {
-                    procesarLecturas(response.body().readings);
+            public void onResponse(Call<EuskalmetReadingResponse> call, Response<EuskalmetReadingResponse> response) {
+                if (response.isSuccessful()) {
+                    Log.d("CLIMA_DEBUG", "4. ¡Respuesta 200 OK de Euskalmet!");
+                    if (response.body() != null && response.body().readings != null) {
+                        Log.d("CLIMA_DEBUG", "5. Hay " + response.body().readings.size() + " lecturas disponibles. Procesando...");
+                        procesarLecturas(response.body().readings);
+                    } else {
+                        Log.e("CLIMA_DEBUG", "ERROR: El JSON llegó, pero la lista 'readings' está vacía o el nombre de las variables en Java no coincide con el JSON de Euskalmet.");
+                    }
+                } else {
+
+                    try {
+                        String errorBody = response.errorBody() != null ? response.errorBody().string() : "Error sin cuerpo";
+                        Log.e("CLIMA_DEBUG", "ERROR DE SERVIDOR (" + response.code() + "): " + errorBody);
+                    } catch (Exception e) {
+                        Log.e("CLIMA_DEBUG", "Error de servidor, y no se pudo leer el mensaje: " + e.getMessage());
+                    }
                 }
             }
 
             @Override
             public void onFailure(Call<EuskalmetReadingResponse> call, Throwable t) {
-                Log.e("CLIMA", "Error al obtener lecturas: " + t.getMessage());
+                // Esto pasa si Retrofit no sabe cómo convertir el JSON a tus clases Java (Fallo de Parseo)
+                Log.e("CLIMA_DEBUG", "FALLO CRÍTICO DE CONEXIÓN O FORMATO JSON: " + t.getMessage());
             }
         });
     }

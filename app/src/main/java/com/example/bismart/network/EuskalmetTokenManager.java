@@ -54,19 +54,30 @@ public class EuskalmetTokenManager {
     }
 
     private static PrivateKey loadPrivateKey(Context context) throws Exception {
-        // Lee el archivo private_key.pem de res/raw
-        InputStream is = context.getResources().openRawResource(
-                context.getResources().getIdentifier("private_key", "raw", context.getPackageName()));
+        // 1. Buscamos el archivo de forma segura
+        int resId = context.getResources().getIdentifier("private_key", "raw", context.getPackageName());
 
-        String key = null;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            key = new String(is.readAllBytes())
-                    .replace("-----BEGIN PRIVATE KEY-----", "")
-                    .replace("-----END PRIVATE KEY-----", "")
-                    .replaceAll("\\s", "");
+        if (resId == 0) {
+            throw new Exception("ERROR CRÍTICO: No se encuentra el archivo 'private_key' en la carpeta res/raw. Asegúrate de que el nombre esté todo en minúsculas y sin espacios.");
         }
 
-        byte[] keyBytes = Base64.getDecoder().decode(key);
+        // 2. Leemos el archivo
+        InputStream is = context.getResources().openRawResource(resId);
+        java.util.Scanner scanner = new java.util.Scanner(is).useDelimiter("\\A");
+        String key = scanner.hasNext() ? scanner.next() : "";
+        is.close();
+
+        // 3. Super-limpieza: Eliminamos TODOS los tipos de cabeceras posibles y los espacios
+        key = key.replace("-----BEGIN PRIVATE KEY-----", "")
+                .replace("-----END PRIVATE KEY-----", "")
+                .replace("-----BEGIN RSA PRIVATE KEY-----", "")
+                .replace("-----END RSA PRIVATE KEY-----", "")
+                .replaceAll("\\n", "")
+                .replaceAll("\\r", "")
+                .replaceAll("\\s", "");
+
+        // 4. Decodificamos y generamos la llave
+        byte[] keyBytes = android.util.Base64.decode(key, android.util.Base64.DEFAULT);
         PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(keyBytes);
         return KeyFactory.getInstance("RSA").generatePrivate(spec);
     }

@@ -229,7 +229,7 @@ public class MapaFragment extends Fragment {
         }
 
         // Clave API de Google Cloud
-        String apiKey = "AIzaSyDEUbEgIFSheOAVMDPV-wiSIcNN_oTi0KA";
+        String apiKey = "AIzaSyCgQ4kwjnt9cxqZyIOMx_vwMuK3vRYq9_s";
 
         // 3. Hacemos la llamada con Retrofit
         DirectionsApi api = GoogleMapsRetrofitClient.getClient().create(DirectionsApi.class);
