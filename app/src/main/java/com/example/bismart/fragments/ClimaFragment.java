@@ -15,11 +15,17 @@ import androidx.cardview.widget.CardView;
 import androidx.fragment.app.Fragment;
 
 import com.example.bismart.R;
+import com.example.bismart.network.AireApi;
+import com.example.bismart.network.AireEstacionResponse;
+import com.example.bismart.network.AireMedicionResponse;
+import com.example.bismart.network.AireRetrofitClient;
 import com.example.bismart.network.OpenWeatherApi;
 import com.example.bismart.network.OpenWeatherResponse;
 import com.example.bismart.network.OpenWeatherRetrofitClient;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
+
+import java.util.List;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -33,8 +39,8 @@ public class ClimaFragment extends Fragment {
     private static final double LAT_BILBAO = 43.2630;
     private static final double LON_BILBAO = -2.9350;
 
-    private TextView tvTemperatura, tvLluvia, tvViento, tvHumedad, tvEstacion, tvAviso;
-    private CardView cardAviso;
+    private TextView tvTemperatura, tvLluvia, tvViento, tvHumedad, tvEstacion, tvAviso, tvEstacionAire, tvIndiceCalidad, tvDescripcionCalidad, tvConsejoAire;
+    private CardView cardAviso, cardIndiceCalidad;
     private FusedLocationProviderClient fusedLocationClient;
 
     @Nullable
@@ -50,6 +56,11 @@ public class ClimaFragment extends Fragment {
         tvEstacion = view.findViewById(R.id.tvEstacion);
         tvAviso = view.findViewById(R.id.tvAviso);
         cardAviso = view.findViewById(R.id.cardAviso);
+        tvEstacionAire = view.findViewById(R.id.tvEstacionAire);
+        tvIndiceCalidad = view.findViewById(R.id.tvIndiceCalidad);
+        tvDescripcionCalidad = view.findViewById(R.id.tvDescripcionCalidad);
+        tvConsejoAire = view.findViewById(R.id.tvConsejoAire);
+        cardIndiceCalidad = view.findViewById(R.id.cardIndiceCalidad);
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity());
 
@@ -66,6 +77,7 @@ public class ClimaFragment extends Fragment {
                 // Sin GPS usamos Bilbao
                 obtenerDatosClima(LAT_BILBAO, LON_BILBAO);
             }
+            cargarCalidadAire(location);
         });
     }
 
@@ -127,5 +139,116 @@ public class ClimaFragment extends Fragment {
         } else {
             cardAviso.setVisibility(View.GONE);
         }
+    }
+
+    private void cargarCalidadAire(Location location) {
+        Log.d("AIRE_DEBUG", "1. Pidiendo estaciones...");
+        AireApi api = AireRetrofitClient.getClient().create(AireApi.class);
+        api.getEstaciones().enqueue(new Callback<List<AireEstacionResponse>>() {
+            @Override
+            public void onResponse(Call<List<AireEstacionResponse>> call,
+                                   Response<List<AireEstacionResponse>> response) {
+                Log.d("AIRE_DEBUG", "2. Código: " + response.code());
+                if (response.isSuccessful() && response.body() != null) {
+                    Log.d("AIRE_DEBUG", "3. Estaciones recibidas: " + response.body().size());
+                    AireEstacionResponse cercana = encontrarEstacionMasCercana(response.body(), location);
+                    if (cercana != null) {
+                        Log.d("AIRE_DEBUG", "4. Estación más cercana: " + cercana.nombre);
+                        obtenerMedicionAire(cercana);
+                    }
+                } else {
+                    try {
+                        Log.e("AIRE_DEBUG", "Error body: " + response.errorBody().string());
+                    } catch (Exception e) {
+                        Log.e("AIRE_DEBUG", "Error código: " + response.code());
+                    }
+                }
+            }
+            @Override
+            public void onFailure(Call<List<AireEstacionResponse>> call, Throwable t) {
+                Log.e("AIRE_DEBUG", "FALLO: " + t.getMessage());
+            }
+        });
+    }
+
+    private AireEstacionResponse encontrarEstacionMasCercana(List<AireEstacionResponse> estaciones,
+                                                             Location miUbicacion) {
+        if (estaciones == null || estaciones.isEmpty()) return null;
+        AireEstacionResponse cercana = estaciones.get(0);
+        double minDist = Double.MAX_VALUE;
+        double lat = miUbicacion != null ? miUbicacion.getLatitude() : 43.2630;
+        double lon = miUbicacion != null ? miUbicacion.getLongitude() : -2.9350;
+        for (AireEstacionResponse e : estaciones) {
+            double dist = Math.sqrt(Math.pow(e.getLatitud() - lat, 2) + Math.pow(e.getLongitud() - lon, 2));
+            if (dist < minDist) { minDist = dist; cercana = e; }
+        }
+        return cercana;
+    }
+
+    private void obtenerMedicionAire(AireEstacionResponse estacion) {
+        tvEstacionAire.setText("📍 " + estacion.nombre + " · " + estacion.municipio);
+
+        AireApi api = AireRetrofitClient.getClient().create(AireApi.class);
+        api.getMedicion(estacion.nombre).enqueue(new Callback<List<AireMedicionResponse>>() {
+            @Override
+            public void onResponse(Call<List<AireMedicionResponse>> call,
+                                   Response<List<AireMedicionResponse>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    // Buscar la lectura más reciente que tenga ICAEstacion
+                    for (AireMedicionResponse lectura : response.body()) {
+                        if (lectura.icaEstacion != null && !lectura.icaEstacion.isEmpty()) {
+                            mostrarIndiceCalidad(lectura.icaEstacion);
+                            return;
+                        }
+                    }
+                }
+            }
+            @Override
+            public void onFailure(Call<List<AireMedicionResponse>> call, Throwable t) {
+                Log.e("AIRE", "Error medición: " + t.getMessage());
+            }
+        });
+    }
+
+    private void mostrarIndiceCalidad(String ica) {
+        // El ICA viene como "Muy buena / Oso ona", "Buena / Ona", etc.
+        // Cogemos solo la parte en español (antes del /)
+        String[] partes = ica.split("/");
+        String descripcion = partes[0].trim();
+
+        tvDescripcionCalidad.setText(descripcion);
+
+        int color;
+        String consejo;
+        String icaLower = descripcion.toLowerCase();
+
+        if (icaLower.contains("muy buena")) {
+            tvIndiceCalidad.setText("1");
+            color = 0xFF4CAF50;
+            consejo = "✅ Aire excelente. Perfecto para ir en bici o a pie.";
+        } else if (icaLower.contains("buena")) {
+            tvIndiceCalidad.setText("2");
+            color = 0xFF8BC34A;
+            consejo = "✅ Aire bueno. Puedes moverte sin problema.";
+        } else if (icaLower.contains("admisible")) {
+            tvIndiceCalidad.setText("3");
+            color = 0xFFFFC107;
+            consejo = "⚠️ Calidad admisible. Personas sensibles deben tener precaución.";
+        } else if (icaLower.contains("regular") || icaLower.contains("mala")) {
+            tvIndiceCalidad.setText("4");
+            color = 0xFFFF9800;
+            consejo = "⚠️ Calidad regular. Recomendable usar transporte público.";
+        } else if (icaLower.contains("muy mala")) {
+            tvIndiceCalidad.setText("5");
+            color = 0xFFF44336;
+            consejo = "🚫 Aire malo. Evita ejercicio físico al aire libre.";
+        } else {
+            tvIndiceCalidad.setText("6");
+            color = 0xFF9C27B0;
+            consejo = "🚫 Calidad extremadamente mala. Quédate en interior.";
+        }
+
+        cardIndiceCalidad.setCardBackgroundColor(color);
+        tvConsejoAire.setText(consejo);
     }
 }
