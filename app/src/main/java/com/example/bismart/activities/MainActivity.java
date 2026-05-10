@@ -15,7 +15,20 @@ import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 
+import android.content.IntentSender;
+import android.util.Log;
+
+import com.google.android.gms.common.api.ResolvableApiException;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.LocationSettingsRequest;
+import com.google.android.gms.location.LocationSettingsResponse;
+import com.google.android.gms.location.SettingsClient;
+import com.google.android.gms.tasks.Task;
+
 public class MainActivity extends AppCompatActivity {
+
+    private android.content.BroadcastReceiver locationReceiver;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -64,6 +77,9 @@ public class MainActivity extends AppCompatActivity {
             cargarFragment(fragment);
             return true;
         });
+
+        pedirActivarUbicacion();
+        registrarReceptorUbicacion();
     }
 
     private void cargarFragment(Fragment fragment) {
@@ -71,5 +87,63 @@ public class MainActivity extends AppCompatActivity {
                 .beginTransaction()
                 .replace(R.id.fragmentContainer, fragment)
                 .commit();
+    }
+
+    private void pedirActivarUbicacion() {
+        LocationRequest locationRequest = LocationRequest.create()
+                .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+
+        LocationSettingsRequest settingsRequest = new LocationSettingsRequest.Builder()
+                .addLocationRequest(locationRequest)
+                .setAlwaysShow(true)
+                .build();
+
+        LocationServices.getSettingsClient(this)
+                .checkLocationSettings(settingsRequest)
+                .addOnFailureListener(e -> {
+                    if (e instanceof ResolvableApiException) {
+                        try {
+                            ((ResolvableApiException) e).startResolutionForResult(this, 1001);
+                        } catch (IntentSender.SendIntentException ex) {
+                            Log.e("UBICACION", "Error: " + ex.getMessage());
+                        }
+                    }
+                });
+    }
+
+    private void registrarReceptorUbicacion() {
+        locationReceiver = new android.content.BroadcastReceiver() {
+            @Override
+            public void onReceive(android.content.Context context, Intent intent) {
+                if (intent.getAction().equals(android.location.LocationManager.PROVIDERS_CHANGED_ACTION)) {
+                    android.location.LocationManager lm =
+                            (android.location.LocationManager) getSystemService(LOCATION_SERVICE);
+                    boolean gpsActivo = lm.isProviderEnabled(android.location.LocationManager.GPS_PROVIDER);
+                    if (!gpsActivo) {
+                        // Ubicación desactivada → pedir que la encienda
+                        pedirActivarUbicacion();
+                    }
+                }
+            }
+        };
+
+        android.content.IntentFilter filter = new android.content.IntentFilter(
+                android.location.LocationManager.PROVIDERS_CHANGED_ACTION);
+        registerReceiver(locationReceiver, filter);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == 1001 && resultCode != RESULT_OK) {
+            // Si rechaza, volvemos a pedir al cabo de 3 segundos
+            new android.os.Handler().postDelayed(this::pedirActivarUbicacion, 3000);
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (locationReceiver != null) unregisterReceiver(locationReceiver);
     }
 }
