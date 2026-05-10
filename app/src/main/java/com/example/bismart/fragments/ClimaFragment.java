@@ -15,15 +15,11 @@ import androidx.cardview.widget.CardView;
 import androidx.fragment.app.Fragment;
 
 import com.example.bismart.R;
-import com.example.bismart.network.EuskalmetApi;
-import com.example.bismart.network.EuskalmetReadingResponse;
-import com.example.bismart.network.EuskalmetRetrofitClient;
-import com.example.bismart.network.EuskalmetStationsResponse;
-import com.example.bismart.network.EuskalmetTokenManager;
+import com.example.bismart.network.OpenWeatherApi;
+import com.example.bismart.network.OpenWeatherResponse;
+import com.example.bismart.network.OpenWeatherRetrofitClient;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
-
-import java.util.List;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -31,8 +27,11 @@ import retrofit2.Response;
 
 public class ClimaFragment extends Fragment {
 
-    // ID de la estación de Bilbao (Miribilla)
-    private static final String ESTACION_BILBAO = "C039";
+    private static final String API_KEY = "7dec46e36174f031adcef4826c340199";
+
+    // Coordenadas de Bilbao por defecto
+    private static final double LAT_BILBAO = 43.2630;
+    private static final double LON_BILBAO = -2.9350;
 
     private TextView tvTemperatura, tvLluvia, tvViento, tvHumedad, tvEstacion, tvAviso;
     private CardView cardAviso;
@@ -60,147 +59,73 @@ public class ClimaFragment extends Fragment {
 
     @SuppressLint("MissingPermission")
     private void cargarClima() {
-        try{
-        Log.d("CLIMA_DEBUG", "1. Iniciando carga de clima...");
-        String token = EuskalmetTokenManager.getToken(
-                requireContext(),
-                "andonicastellanos07@gmail.com"
-        );
-
-        if (token == null) {
-            Log.e("CLIMA_DEBUG", "ERROR CRÍTICO: El token es nulo. La llave privada no se está leyendo bien o está corrupta.");
-            return;
-        }
-
-        Log.d("CLIMA_DEBUG", "2. Token generado con éxito. Saltando GPS temporalmente y pidiendo a Bilbao...");
-        // Para depurar, vamos directos a la estación de Bilbao sin esperar al GPS
-        obtenerDatosEstacion(ESTACION_BILBAO, "Bilbao - Miribilla", token);
-        } catch (Exception e) {
-            Log.e("CLIMA_DEBUG", "¡ATRAPADO EL CRASH AL CARGAR!: " + e.toString(), e);
-        }
+        fusedLocationClient.getLastLocation().addOnSuccessListener(location -> {
+            if (location != null) {
+                obtenerDatosClima(location.getLatitude(), location.getLongitude());
+            } else {
+                // Sin GPS usamos Bilbao
+                obtenerDatosClima(LAT_BILBAO, LON_BILBAO);
+            }
+        });
     }
 
-    private void buscarEstacionMasCercana(Location miUbicacion, String TOKEN) {
-        EuskalmetApi api = EuskalmetRetrofitClient.getClient().create(EuskalmetApi.class);
-        api.getStations(TOKEN).enqueue(new Callback<EuskalmetStationsResponse>() {
-            @Override
-            public void onResponse(Call<EuskalmetStationsResponse> call,
-                                   Response<EuskalmetStationsResponse> response) {
-                if (response.isSuccessful() && response.body() != null
-                        && response.body().stations != null) {
-
-                    List<EuskalmetStationsResponse.Station> stations = response.body().stations;
-                    String idMasCercana = ESTACION_BILBAO;
-                    String nombreMasCercana = "Bilbao";
-                    double minDistancia = Double.MAX_VALUE;
-
-                    for (EuskalmetStationsResponse.Station s : stations) {
-                        if (s.location == null) continue;
-                        double dist = calcularDistancia(
-                                miUbicacion.getLatitude(), miUbicacion.getLongitude(),
-                                s.location.latitude, s.location.longitude);
-                        if (dist < minDistancia) {
-                            minDistancia = dist;
-                            idMasCercana = s.id;
-                            nombreMasCercana = s.name;
+    private void obtenerDatosClima(double lat, double lon) {
+        OpenWeatherApi api = OpenWeatherRetrofitClient.getClient().create(OpenWeatherApi.class);
+        api.getWeather(lat, lon, API_KEY, "metric", "es")
+                .enqueue(new Callback<OpenWeatherResponse>() {
+                    @Override
+                    public void onResponse(Call<OpenWeatherResponse> call,
+                                           Response<OpenWeatherResponse> response) {
+                        Log.d("CLIMA_OW", "Código: " + response.code());
+                        if (response.isSuccessful() && response.body() != null) {
+                            Log.d("CLIMA_OW", "Ciudad: " + response.body().cityName);
+                            Log.d("CLIMA_OW", "Temp: " + response.body().main.temp);
+                            mostrarDatos(response.body());
+                        } else {
+                            try {
+                                Log.e("CLIMA_OW", "Error body: " + response.errorBody().string());
+                            } catch (Exception e) {
+                                Log.e("CLIMA_OW", "Error: " + response.code());
+                            }
                         }
                     }
-                    obtenerDatosEstacion(idMasCercana, nombreMasCercana, TOKEN);
-                } else {
-                    obtenerDatosEstacion(ESTACION_BILBAO, "Bilbao - Miribilla", TOKEN);
-                }
-            }
 
-            @Override
-            public void onFailure(Call<EuskalmetStationsResponse> call, Throwable t) {
-                Log.e("CLIMA", "Error: " + t.getMessage());
-                obtenerDatosEstacion(ESTACION_BILBAO, "Bilbao - Miribilla", TOKEN);
-            }
-        });
-    }
-
-    private void obtenerDatosEstacion(String estacionId, String nombreEstacion, String TOKEN) {
-        if (tvEstacion != null) {
-            tvEstacion.setText("Cargando: " + nombreEstacion + "...");
-        }
-
-        EuskalmetApi api = EuskalmetRetrofitClient.getClient().create(EuskalmetApi.class);
-        Log.d("CLIMA_DEBUG", "3. Enviando petición a la API de Euskalmet para estación: " + estacionId);
-
-        api.getLastReading(TOKEN, estacionId).enqueue(new Callback<EuskalmetReadingResponse>() {
-            @Override
-            public void onResponse(Call<EuskalmetReadingResponse> call, Response<EuskalmetReadingResponse> response) {
-                if (response.isSuccessful()) {
-                    Log.d("CLIMA_DEBUG", "4. ¡Respuesta 200 OK de Euskalmet!");
-                    if (response.body() != null && response.body().readings != null) {
-                        Log.d("CLIMA_DEBUG", "5. Hay " + response.body().readings.size() + " lecturas disponibles. Procesando...");
-                        procesarLecturas(response.body().readings);
-                    } else {
-                        Log.e("CLIMA_DEBUG", "ERROR: El JSON llegó, pero la lista 'readings' está vacía o el nombre de las variables en Java no coincide con el JSON de Euskalmet.");
+                    @Override
+                    public void onFailure(Call<OpenWeatherResponse> call, Throwable t) {
+                        Log.e("CLIMA_OW", "Fallo: " + t.getMessage());
                     }
-                } else {
-
-                    try {
-                        String errorBody = response.errorBody() != null ? response.errorBody().string() : "Error sin cuerpo";
-                        Log.e("CLIMA_DEBUG", "ERROR DE SERVIDOR (" + response.code() + "): " + errorBody);
-                    } catch (Exception e) {
-                        Log.e("CLIMA_DEBUG", "Error de servidor, y no se pudo leer el mensaje: " + e.getMessage());
-                    }
-                }
-            }
-
-            @Override
-            public void onFailure(Call<EuskalmetReadingResponse> call, Throwable t) {
-                // Esto pasa si Retrofit no sabe cómo convertir el JSON a tus clases Java (Fallo de Parseo)
-                Log.e("CLIMA_DEBUG", "FALLO CRÍTICO DE CONEXIÓN O FORMATO JSON: " + t.getMessage());
-            }
-        });
+                });
     }
 
-    private void procesarLecturas(List<EuskalmetReadingResponse.Reading> readings) {
-        double temperatura = 0, lluvia = 0, viento = 0, humedad = 0;
+    private void mostrarDatos(OpenWeatherResponse data) {
+        // Temperatura
+        tvTemperatura.setText(String.format("%.1f°C", data.main.temp));
 
-        for (EuskalmetReadingResponse.Reading r : readings) {
-            if (r.parameterId == null) continue;
-            switch (r.parameterId) {
-                case "TA":  temperatura = r.value; break; // Temperatura aire
-                case "PR":  lluvia = r.value;      break; // Precipitación
-                case "VV":  viento = r.value;      break; // Velocidad viento
-                case "HR":  humedad = r.value;     break; // Humedad relativa
-            }
+        // Humedad
+        tvHumedad.setText(String.format("%.0f%%", data.main.humidity));
+
+        // Viento (m/s → km/h)
+        double vientoKmh = data.wind.speed * 3.6;
+        tvViento.setText(String.format("%.1f km/h", vientoKmh));
+
+        // Lluvia (puede ser null si no llueve)
+        double lluvia = data.rain != null ? data.rain.oneHour : 0;
+        tvLluvia.setText(String.format("%.1f mm", lluvia));
+
+        // Nombre de la ciudad
+        String descripcion = data.weather != null && !data.weather.isEmpty()
+                ? data.weather.get(0).description : "";
+        tvEstacion.setText("📍 " + data.cityName + " · " + descripcion);
+
+        // Aviso si llueve o viento fuerte
+        if (lluvia > 0 || vientoKmh > 40) {
+            String aviso = lluvia > 0
+                    ? "🌧 Está lloviendo. Considera usar el autobús o tranvía."
+                    : "💨 Viento fuerte. No recomendable ir en bici.";
+            tvAviso.setText(aviso);
+            cardAviso.setVisibility(View.VISIBLE);
+        } else {
+            cardAviso.setVisibility(View.GONE);
         }
-
-        final double tempFinal = temperatura;
-        final double lluviaFinal = lluvia;
-        final double vientoFinal = viento;
-        final double humedadFinal = humedad;
-
-        requireActivity().runOnUiThread(() -> {
-            tvTemperatura.setText(String.format("%.1f°C", tempFinal));
-            tvLluvia.setText(String.format("%.1f mm", lluviaFinal));
-            tvViento.setText(String.format("%.1f km/h", vientoFinal));
-            tvHumedad.setText(String.format("%.0f%%", humedadFinal));
-
-            // Aviso si llueve o hace mucho viento
-            if (lluviaFinal > 0 || vientoFinal > 40) {
-                String aviso = lluviaFinal > 0
-                        ? "🌧 Está lloviendo. Considera usar el autobús o tranvía."
-                        : "💨 Viento fuerte. No recomendable ir en bici.";
-                tvAviso.setText(aviso);
-                cardAviso.setVisibility(View.VISIBLE);
-            } else {
-                cardAviso.setVisibility(View.GONE);
-            }
-        });
-    }
-
-    private double calcularDistancia(double lat1, double lon1, double lat2, double lon2) {
-        double R = 6371000;
-        double dLat = Math.toRadians(lat2 - lat1);
-        double dLon = Math.toRadians(lon2 - lon1);
-        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
-                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
-                * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
 }
