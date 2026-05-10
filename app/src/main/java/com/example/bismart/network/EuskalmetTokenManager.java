@@ -37,10 +37,12 @@ public class EuskalmetTokenManager {
 
             long now = System.currentTimeMillis();
             cachedToken = Jwts.builder()
-                    .setIssuer(email)
+                    .setAudience("met01.apikey")
+                    .setIssuer("BiSmartApp")
                     .setIssuedAt(new Date(now))
                     .setExpiration(new Date(now + EXPIRATION_MS))
-                    .claim("email", email)
+                    .claim("version", "1.0.0")
+                    .claim("email", "andonicastellanos07@gmail.com")
                     .signWith(privateKey, SignatureAlgorithm.RS256)
                     .compact();
 
