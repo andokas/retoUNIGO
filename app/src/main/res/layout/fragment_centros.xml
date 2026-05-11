@@ -59,19 +59,22 @@
 
     </com.google.android.material.chip.ChipGroup>
 
+    <!-- SearchView con fondo blanco y bordes redondeados -->
     <androidx.appcompat.widget.SearchView
         android:id="@+id/searchView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="8dp"
-        android:background="@android:color/white"
+        android:background="@drawable/search_box_bg"
+        android:elevation="2dp"
         app:queryHint="Buscar facultad..."
-        app:iconifiedByDefault="false"/>
+        app:iconifiedByDefault="false" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerViewCentros"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
         android:padding="4dp"
         android:clipToPadding="false"/>
 

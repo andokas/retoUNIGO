@@ -41,55 +41,18 @@ public class ClimaFragment extends Fragment {
     private static final double LAT_BILBAO = 43.2630;
     private static final double LON_BILBAO = -2.9350;
 
-    private TextView tvTemperatura, tvLluvia, tvViento, tvHumedad, tvEstacion, tvAviso, tvEstacionAire, tvIndiceCalidad, tvDescripcionCalidad, tvConsejoAire;
+    private TextView tvTemperatura, tvLluvia, tvViento, tvHumedad, tvEstacion, tvAviso,
+            tvEstacionAire, tvIndiceCalidad, tvDescripcionCalidad, tvConsejoAire;
     private CardView cardAviso, cardIndiceCalidad;
+
+    // -- nuevos para icono + descripción de estado de cielo --
+    private TextView tvIconoEstado, tvDescripcionEstado;
+
     private FusedLocationProviderClient fusedLocationClient;
     private static final Set<String> NOMBRES_ESTACIONES_CON_DATOS = new HashSet<>(Arrays.asList(
-            "ABANTO",
-            "AMURRIO",
-            "ARRIGORRIAGA",
-            "ATOCHA",
-            "AZPEITIA",
-            "BARAKALDO",
-            "BASURTO",
-            "BERMEO",
-            "DURANGO",
-            "EIBAR",
-            "ERANDIO",
-            "ERRENTERIA",
-            "GETXO",
-            "GALDAKAO",
-            "GALDAKAO B",
-            "IRUN",
-            "IZARRA",
-            "KAREAGA",
-            "LAVAGA",
-            "LEGAZPI",
-            "MAIRAGA",
-            "MIRAVALLES",
-            "MUNGIA",
-            "ORTUELLA",
-            "PORTUGALETE",
-            "SAKANA",
-            "SALBURUA",
-            "SANTURTZI",
-            "UNBE",
-            "UNIDAD MOVIL 1",
-            "UNIDAD MOVIL 3",
-            "VALLE DE TRAPAGA",
-            "VDA ARETXABALETA",
-            "VDA AÑASTRA",
-            "VDA BASAURI",
-            "VDA BASURTO",
-            "VDA EIBAR",
-            "VDA GASTEIZ",
-            "VDA IRUN",
-            "VDA LODOSA",
-            "VDA PORTU",
-            "VDA SANTURTZI",
-            "VDA TOLOSA",
-            "ZALLA",
-            "ZARAUTZ"
+            "ABANTO", "AMURRIO", "ARRIGORRIAGA", "ATOCHA", "AZPEITIA", "BARAKALDO", "BASURTO", "BERMEO", "DURANGO", "EIBAR", "ERANDIO", "ERRENTERIA", "GETXO", "GALDAKAO", "GALDAKAO B", "IRUN", "IZARRA", "KAREAGA",
+            "LAVAGA", "LEGAZPI", "MAIRAGA", "MIRAVALLES", "MUNGIA", "ORTUELLA", "PORTUGALETE", "SAKANA", "SALBURUA", "SANTURTZI", "UNBE", "UNIDAD MOVIL 1", "UNIDAD MOVIL 3", "VALLE DE TRAPAGA", "VDA ARETXABALETA",
+            "VDA AÑASTRA", "VDA BASAURI", "VDA BASURTO", "VDA EIBAR", "VDA GASTEIZ", "VDA IRUN", "VDA LODOSA", "VDA PORTU", "VDA SANTURTZI", "VDA TOLOSA", "ZALLA", "ZARAUTZ"
     ));
 
     @Nullable
@@ -98,14 +61,16 @@ public class ClimaFragment extends Fragment {
                              @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_clima, container, false);
 
+        // NUEVOS
+        tvIconoEstado = view.findViewById(R.id.ivIconoEstado);
+        tvDescripcionEstado = view.findViewById(R.id.tvDescripcionEstado);
+
         tvTemperatura = view.findViewById(R.id.tvTemperatura);
         tvLluvia = view.findViewById(R.id.tvLluvia);
         tvViento = view.findViewById(R.id.tvViento);
         tvHumedad = view.findViewById(R.id.tvHumedad);
-        tvEstacion = view.findViewById(R.id.tvEstacion);
         tvAviso = view.findViewById(R.id.tvAviso);
         cardAviso = view.findViewById(R.id.cardAviso);
-        tvEstacionAire = view.findViewById(R.id.tvEstacionAire);
         tvIndiceCalidad = view.findViewById(R.id.tvIndiceCalidad);
         tvDescripcionCalidad = view.findViewById(R.id.tvDescripcionCalidad);
         tvConsejoAire = view.findViewById(R.id.tvConsejoAire);
@@ -123,7 +88,6 @@ public class ClimaFragment extends Fragment {
             if (location != null) {
                 obtenerDatosClima(location.getLatitude(), location.getLongitude());
             } else {
-                // Sin GPS usamos Bilbao
                 obtenerDatosClima(LAT_BILBAO, LON_BILBAO);
             }
             cargarCalidadAire(location);
@@ -170,15 +134,22 @@ public class ClimaFragment extends Fragment {
     }
 
     private void mostrarDatos(OpenWeatherResponse data) {
+        // 1. Estado de cielo: icono + descripción
+        if (data.weather != null && !data.weather.isEmpty()) {
+            String estado = data.weather.get(0).main;
+            String descripcion = data.weather.get(0).description;
+            setIconoYDescripcionCielo(estado, descripcion);
+        } else {
+            tvIconoEstado.setText("🌡");
+            tvDescripcionEstado.setText("-");
+        }
+
         tvTemperatura.setText(String.format("%.1f°C", data.main.temp));
         tvHumedad.setText(String.format("%.0f%%", data.main.humidity));
         double vientoKmh = data.wind.speed * 3.6;
         tvViento.setText(String.format("%.1f km/h", vientoKmh));
         double lluvia = data.rain != null ? data.rain.oneHour : 0;
         tvLluvia.setText(String.format("%.1f mm", lluvia));
-        String descripcion = data.weather != null && !data.weather.isEmpty()
-                ? data.weather.get(0).description : "";
-        tvEstacion.setText("📍 " + data.cityName + " · " + descripcion);
 
         if (lluvia > 0 || vientoKmh > 40) {
             String aviso = lluvia > 0
@@ -189,6 +160,52 @@ public class ClimaFragment extends Fragment {
         } else {
             cardAviso.setVisibility(View.GONE);
         }
+    }
+
+    // NUEVO – icono y descripción visual clara
+    private void setIconoYDescripcionCielo(String estado, String descripcionApi) {
+        String desc = capitalizeFirst(descripcionApi != null ? descripcionApi : estado);
+        if (estado == null) { estado = ""; }
+
+        switch (estado) {
+            case "Clear":
+                tvIconoEstado.setText("☀️");
+                tvDescripcionEstado.setText("Soleado");
+                break;
+            case "Clouds":
+                tvIconoEstado.setText("☁️");
+                tvDescripcionEstado.setText("Nuboso");
+                break;
+            case "Rain":
+                tvIconoEstado.setText("🌧");
+                tvDescripcionEstado.setText("Lluvia");
+                break;
+            case "Thunderstorm":
+                tvIconoEstado.setText("⛈");
+                tvDescripcionEstado.setText("Tormenta");
+                break;
+            case "Snow":
+                tvIconoEstado.setText("❄️");
+                tvDescripcionEstado.setText("Nieve");
+                break;
+            case "Drizzle":
+                tvIconoEstado.setText("🌦️");
+                tvDescripcionEstado.setText("Chubascos");
+                break;
+            case "Mist":
+            case "Fog":
+                tvIconoEstado.setText("🌫");
+                tvDescripcionEstado.setText("Niebla");
+                break;
+            default:
+                tvIconoEstado.setText("🌡");
+                tvDescripcionEstado.setText(desc);
+        }
+    }
+
+    private String capitalizeFirst(String texto) {
+        if (texto == null || texto.isEmpty()) return "";
+        return texto.substring(0,1).toUpperCase() + texto.substring(1);
     }
 
     private void cargarCalidadAire(Location location) {
@@ -246,10 +263,8 @@ public class ClimaFragment extends Fragment {
     }
 
     private void obtenerMedicionAire(AireEstacionResponse estacion) {
-        // El nombre del archivo debe ir sin tildes ni eñes ni diéresis
         String nombreArchivo = quitarTildes(estacion.nombre);
         Log.d("AIRE_DEBUG", "5. Pidiendo medición para archivo: '" + nombreArchivo + "'");
-        tvEstacionAire.setText("📍 " + estacion.nombre + " · " + estacion.municipio);
 
         AireApi api = AireRetrofitClient.getClient().create(AireApi.class);
         api.getMedicion(nombreArchivo).enqueue(new Callback<List<AireMedicionResponse>>() {
@@ -282,7 +297,6 @@ public class ClimaFragment extends Fragment {
         });
     }
 
-    // Función para quitar tildes y eñes, necesaria para que la llamada coincida con los archivos reales.
     public static String quitarTildes(String input) {
         if (input == null) return null;
         return input
@@ -293,7 +307,6 @@ public class ClimaFragment extends Fragment {
                 .replace("Ü", "U").replace("ü", "u")
                 .replace("Ñ", "N").replace("ñ", "n");
     }
-
 
     private void mostrarIndiceCalidad(String ica) {
         String[] partes = ica.split("/");

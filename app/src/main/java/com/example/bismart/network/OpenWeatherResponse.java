@@ -39,6 +39,8 @@ public class OpenWeatherResponse {
     }
 
     public static class Weather {
+        @SerializedName("main")
+        public String main;
         @SerializedName("description")
         public String description;
 
