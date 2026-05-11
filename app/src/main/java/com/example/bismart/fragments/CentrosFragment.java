@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Menu;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -21,7 +22,7 @@ import com.example.bismart.repositories.UsuarioRepository;
 import com.example.bismart.ui.CentroAdapter;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
-import com.google.android.material.chip.Chip;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.chip.ChipGroup;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentSnapshot;
@@ -110,6 +111,7 @@ public class CentrosFragment extends Fragment {
             }
 
             adapter = new CentroAdapter(listaCentros, miUbicacion, centro -> {
+                // Obtener el transporte preferido del usuario
                 usuarioRepository.obtenerUsuario(uidActual).addOnSuccessListener(doc -> {
                     String transportePreferido = doc.getString("transportePreferido");
 
@@ -126,10 +128,19 @@ public class CentrosFragment extends Fragment {
                     MapaFragment mapaFragment = new MapaFragment();
                     mapaFragment.setArguments(args);
 
+                    // Reemplaza el fragmento y añade a backstack
                     requireActivity().getSupportFragmentManager()
                             .beginTransaction()
                             .replace(R.id.fragmentContainer, mapaFragment)
+                            .addToBackStack(null)
                             .commit();
+
+                    // Cambia la selección visual del botón de abajo al de mapa
+                    BottomNavigationView bottomNav = requireActivity().findViewById(R.id.bottomNav);
+                    if (bottomNav != null) {
+                        Menu menu = bottomNav.getMenu();
+                        menu.findItem(R.id.nav_mapa).setChecked(true); // Usa el id de mapa de tu menú
+                    }
                 });
             });
 

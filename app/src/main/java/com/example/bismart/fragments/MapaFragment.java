@@ -92,7 +92,7 @@ public class MapaFragment extends Fragment {
         // 1. Activar el puntito azul (Ubicación real)
         activarUbicacionReal();
 
-        // 2. Cargar argumentos
+        // 2. Cargar argumentos y destino
         Bundle args = getArguments();
         String transportePref = null;
         String nombre = null;
@@ -132,7 +132,7 @@ public class MapaFragment extends Fragment {
                 else if (idSeleccionado == R.id.chipTren) medio = "tren";
                 else if (idSeleccionado == R.id.chipTranvia) medio = "tranvia";
 
-                calcularRuta(medio); //  LLAMAMOS A LA RUTA
+                calcularRutaSegura(medio); // ¡Ahora calcula solo si hay ubicación GPS!
             });
         }
 
@@ -154,18 +154,9 @@ public class MapaFragment extends Fragment {
                 }
             }
 
-            // ⚡ ESPERAR a posición GPS real ANTES de calcular la ruta automática:
+            // Ahora, en vez de calcular directamente, esperamos a tener posición GPS
             if (transportePref != null && !transportePref.isEmpty()) {
-                // Puede que locationOverlay aún no esté instanciado, así que espera a que lo esté desarrollando
-                final String transporteFinal = transportePref;
-                // Post a delayed to wait until locationOverlay is ready (rare edge-case)
-                mapView.postDelayed(() -> {
-                    if (locationOverlay != null) {
-                        locationOverlay.runOnFirstFix(() -> {
-                            requireActivity().runOnUiThread(() -> calcularRuta(transporteFinal));
-                        });
-                    }
-                }, 200); // 200ms es seguro, ajusta si alguna vez hay Warning
+                calcularRutaSegura(transportePref);
             }
         } else if (nombre != null) {
             Toast.makeText(getContext(), "Destino: " + nombre + "\nElige transporte arriba", Toast.LENGTH_LONG).show();
@@ -190,6 +181,24 @@ public class MapaFragment extends Fragment {
             mapView.getOverlays().add(this.locationOverlay);
         } else {
             ActivityCompat.requestPermissions(requireActivity(), new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
+        }
+    }
+
+    /**
+     * Llama a calcularRuta solo cuando haya una posición GPS REAL.
+     * Si ya la tiene, calcula ya.
+     * Si no la tiene, espera (pero solo calcula una vez cuando el GPS la obtenga).
+     */
+    private void calcularRutaSegura(String medioTransporte) {
+        if (locationOverlay != null && locationOverlay.getMyLocation() != null) {
+            calcularRuta(medioTransporte);
+        } else if (locationOverlay != null) {
+            // Espera UNA vez a la posición real, luego calcula.
+            locationOverlay.runOnFirstFix(() ->
+                    requireActivity().runOnUiThread(() -> calcularRuta(medioTransporte))
+            );
+        } else {
+            Toast.makeText(getContext(), "GPS no disponible en este momento", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -224,10 +233,14 @@ public class MapaFragment extends Fragment {
     @Override public void onResume() { super.onResume(); mapView.onResume(); }
     @Override public void onPause() { super.onPause(); mapView.onPause(); }
 
+    /**
+     * Esta función SOLO se llama desde calcularRutaSegura, así que SIEMPRE hay ubicación real lista.
+     */
     private void calcularRuta(String medioTransporte) {
         if (locationOverlay != null && locationOverlay.getMyLocation() != null) {
             ubicacionUsuario = locationOverlay.getMyLocation();
         } else {
+            // Prácticamente nunca, salvo error, pero mantenemos el fallback:
             Log.e("RUTA_DEBUG", "GPS no disponible. Usando Casco Viejo por defecto.");
             ubicacionUsuario = new GeoPoint(43.2598, -2.9244);
         }
