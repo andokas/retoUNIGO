@@ -185,6 +185,8 @@ public class PerfilFragment extends Fragment {
                             case "pie":     radioGroupTransporte.check(R.id.radioPie);    break;
                             case "bici":    radioGroupTransporte.check(R.id.radioBici);   break;
                             case "bus":     radioGroupTransporte.check(R.id.radioBus);    break;
+                            case "metro":     radioGroupTransporte.check(R.id.radioMetro);    break;
+                            case "tren":     radioGroupTransporte.check(R.id.radioTren);    break;
                             case "tranvia": radioGroupTransporte.check(R.id.radioTranvia);break;
                         }
                     }

@@ -109,6 +109,24 @@
                         android:tag="bus"/>
 
                     <RadioButton
+                        android:id="@+id/radioMetro"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="🚇 En metro"
+                        android:textSize="15sp"
+                        android:padding="8dp"
+                        android:tag="bus"/>
+
+                    <RadioButton
+                        android:id="@+id/radioTren"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="🚆 En tren"
+                        android:textSize="15sp"
+                        android:padding="8dp"
+                        android:tag="bus"/>
+
+                    <RadioButton
                         android:id="@+id/radioTranvia"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
