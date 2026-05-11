@@ -27,12 +27,12 @@ public class DirectionsResponse {
         public Distance distance;
 
         @SerializedName("steps")
-        public List<Step> steps; // ← NUEVO
+        public List<Step> steps;
     }
 
     public static class Step {
         @SerializedName("html_instructions")
-        public String htmlInstructions; // ← Texto con la indicación
+        public String htmlInstructions;
 
         @SerializedName("distance")
         public Distance distance;
@@ -42,6 +42,35 @@ public class DirectionsResponse {
 
         @SerializedName("travel_mode")
         public String travelMode;
+
+        @SerializedName("polyline")
+        public Polyline polyline;
+
+        @SerializedName("transit_details")
+        public TransitDetails transitDetails;
+    }
+
+    public static class Polyline {
+        @SerializedName("points")
+        public String points;
+    }
+
+    public static class TransitDetails {
+        @SerializedName("line")
+        public Line line;
+        // Puedes añadir más campos si necesitas (nombre, arrival/departure_stop, color, etc)
+    }
+
+    public static class Line {
+        @SerializedName("vehicle")
+        public Vehicle vehicle;
+        // Puedes añadir nombre, short_name, color...
+    }
+
+    public static class Vehicle {
+        @SerializedName("type")
+        public String type; // "BUS", "SUBWAY", "TRAM", "RAIL", etc
+        // Puedes añadir "name", "icon", etc si quieres mostrarlo en la app
     }
 
     public static class Duration {

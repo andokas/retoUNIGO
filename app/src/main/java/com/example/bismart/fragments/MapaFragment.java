@@ -53,16 +53,18 @@ import retrofit2.Response;
 public class MapaFragment extends Fragment {
 
     private MapView mapView;
-    private MyLocationNewOverlay locationOverlay; // El puntito azul
-    private Polyline rutaDibujadaActual = null;
-    private GeoPoint ubicacionUsuario = null;   //  GPS
-    private GeoPoint destinoSeleccionado = null; // La universidad elegida
+    private MyLocationNewOverlay locationOverlay; // Puntito azul
+    private List<Polyline> polylines = new ArrayList<>();
+    private GeoPoint ubicacionUsuario = null;
+    private GeoPoint destinoSeleccionado = null;
     private CardView cardIndicaciones;
     private TextView tvResumenRuta;
     private RecyclerView recyclerIndicaciones;
     private ImageView ivFlechaPanel;
     private boolean panelExpandido = false;
-    private String idiomaActual = "es"; // español por defecto
+    private String idiomaActual = "es";
+    private boolean idiomaCargado = false;
+    private Bundle argsGuardados = null;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -74,26 +76,55 @@ public class MapaFragment extends Fragment {
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
+        // Guardamos argumento para usar tras cargar idioma
+        argsGuardados = getArguments();
+
+        // Inicializa views básicos (no UI dependiente de idioma ni rutas todavía)
         mapView = view.findViewById(R.id.mapView);
-        mapView.setTileSource(TileSourceFactory.MAPNIK);
-        mapView.setMultiTouchControls(true);
         cardIndicaciones = view.findViewById(R.id.cardIndicaciones);
         tvResumenRuta = view.findViewById(R.id.tvResumenRuta);
         recyclerIndicaciones = view.findViewById(R.id.recyclerIndicaciones);
         ivFlechaPanel = view.findViewById(R.id.ivFlechaPanel);
 
-        // Expandir/colapsar al tocar la cabecera
+        // Panel expandible
         view.findViewById(R.id.headerIndicaciones).setOnClickListener(v -> {
             panelExpandido = !panelExpandido;
             recyclerIndicaciones.setVisibility(panelExpandido ? View.VISIBLE : View.GONE);
             ivFlechaPanel.setRotation(panelExpandido ? 180f : 0f);
         });
 
-        // 1. Activar el puntito azul (Ubicación real)
+        // Activa GPS (esto no depende de idioma)
         activarUbicacionReal();
 
-        // 2. Cargar argumentos y destino
-        Bundle args = getArguments();
+        // Carga idioma y arranca inicialización UI "real" al terminar
+        cargarIdiomaUsuarioYContinuar(view, argsGuardados);
+    }
+
+    private void cargarIdiomaUsuarioYContinuar(View view, Bundle args) {
+        String uid = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        new UsuarioRepository().obtenerUsuario(uid)
+                .addOnSuccessListener(doc -> {
+                    if (doc.exists() && doc.getString("idioma") != null) {
+                        idiomaActual = doc.getString("idioma");
+                    }
+                    idiomaCargado = true;
+                    inicializarVistaMapa(view, args);
+                })
+                .addOnFailureListener(e -> {
+                    idiomaCargado = true;
+                    inicializarVistaMapa(view, args);
+                });
+    }
+
+    /**
+     * Solo se llama una vez se ha leído el idioma del usuario (o se queda en "es" por defecto).
+     * Aquí sí puedes montar chips, panel, cálculo de ruta, etc.
+     */
+    private void inicializarVistaMapa(View view, Bundle args) {
+        mapView.setTileSource(TileSourceFactory.MAPNIK);
+        mapView.setMultiTouchControls(true);
+        polylines.clear();
+
         String transportePref = null;
         String nombre = null;
 
@@ -103,25 +134,20 @@ public class MapaFragment extends Fragment {
             nombre = args.getString("nombre");
             destinoSeleccionado = new GeoPoint(lat, lng);
 
-            // Centramos el mapa en la facultad
             mapView.getController().setZoom(16.0);
             mapView.getController().setCenter(destinoSeleccionado);
         } else {
-            // Abrir mapa general en Bilbao
             GeoPoint bilbao = new GeoPoint(43.2630, -2.9350);
             mapView.getController().setZoom(13.0);
             mapView.getController().setCenter(bilbao);
         }
 
-        // 3. Cargar marcadores
-        cargarMarcadores();
+        cargarMarcadores(); // Esto da igual idioma
 
-        // 4. Chips de transporte y selección automática
         ChipGroup chipGroup = view.findViewById(R.id.chipGroupTransporte);
         if (chipGroup != null) {
             chipGroup.setOnCheckedStateChangeListener((group, checkedIds) -> {
                 if (checkedIds.isEmpty()) return;
-
                 int idSeleccionado = checkedIds.get(0);
                 String medio = "";
 
@@ -132,11 +158,10 @@ public class MapaFragment extends Fragment {
                 else if (idSeleccionado == R.id.chipTren) medio = "tren";
                 else if (idSeleccionado == R.id.chipTranvia) medio = "tranvia";
 
-                calcularRutaSegura(medio); // ¡Ahora calcula solo si hay ubicación GPS!
+                calcularRutaSegura(medio);
             });
         }
 
-        // Marcar automáticamente el chip favorito si viene en el bundle:
         if (args != null && args.containsKey("transportePreferido")) {
             transportePref = args.getString("transportePreferido");
             int chipId = -1;
@@ -149,27 +174,14 @@ public class MapaFragment extends Fragment {
                     case "tren":     chipId = R.id.chipTren; break;
                     case "tranvia":  chipId = R.id.chipTranvia; break;
                 }
-                if (chipId != -1) {
-                    chipGroup.check(chipId);
-                }
+                if (chipId != -1) chipGroup.check(chipId);
             }
-
-            // Ahora, en vez de calcular directamente, esperamos a tener posición GPS
             if (transportePref != null && !transportePref.isEmpty()) {
                 calcularRutaSegura(transportePref);
             }
         } else if (nombre != null) {
             Toast.makeText(getContext(), "Destino: " + nombre + "\nElige transporte arriba", Toast.LENGTH_LONG).show();
         }
-
-        // 5. CARGAR IDIOMA del usuario
-        String uid = FirebaseAuth.getInstance().getCurrentUser().getUid();
-        new UsuarioRepository().obtenerUsuario(uid)
-                .addOnSuccessListener(doc -> {
-                    if (doc.exists() && doc.getString("idioma") != null) {
-                        idiomaActual = doc.getString("idioma");
-                    }
-                });
     }
 
     private void activarUbicacionReal() {
@@ -177,23 +189,17 @@ public class MapaFragment extends Fragment {
                 == PackageManager.PERMISSION_GRANTED) {
             this.locationOverlay = new MyLocationNewOverlay(new GpsMyLocationProvider(requireContext()), mapView);
             this.locationOverlay.enableMyLocation();
-            this.locationOverlay.enableFollowLocation(); // El mapa sigue al usuario al inicio
+            this.locationOverlay.enableFollowLocation();
             mapView.getOverlays().add(this.locationOverlay);
         } else {
             ActivityCompat.requestPermissions(requireActivity(), new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
         }
     }
 
-    /**
-     * Llama a calcularRuta solo cuando haya una posición GPS REAL.
-     * Si ya la tiene, calcula ya.
-     * Si no la tiene, espera (pero solo calcula una vez cuando el GPS la obtenga).
-     */
     private void calcularRutaSegura(String medioTransporte) {
         if (locationOverlay != null && locationOverlay.getMyLocation() != null) {
             calcularRuta(medioTransporte);
         } else if (locationOverlay != null) {
-            // Espera UNA vez a la posición real, luego calcula.
             locationOverlay.runOnFirstFix(() ->
                     requireActivity().runOnUiThread(() -> calcularRuta(medioTransporte))
             );
@@ -216,31 +222,25 @@ public class MapaFragment extends Fragment {
                     Drawable icon = getResources().getDrawable(R.drawable.icono_marcador_universidad, null);
 
                     if (icon != null) {
-                        // Extraer el Bitmap de la imagen
                         Bitmap bitmap = ((BitmapDrawable) icon).getBitmap();
                         Bitmap scaledBitmap = Bitmap.createScaledBitmap(bitmap, 40, 40, false);
                         Drawable scaledIcon = new BitmapDrawable(getResources(), scaledBitmap).mutate();
                         marker.setIcon(scaledIcon);
                     }
-
                     mapView.getOverlays().add(marker);
                 }
             }
-            mapView.invalidate(); // Refresca el mapa para mostrar los cambios
+            mapView.invalidate();
         });
     }
 
     @Override public void onResume() { super.onResume(); mapView.onResume(); }
     @Override public void onPause() { super.onPause(); mapView.onPause(); }
 
-    /**
-     * Esta función SOLO se llama desde calcularRutaSegura, así que SIEMPRE hay ubicación real lista.
-     */
     private void calcularRuta(String medioTransporte) {
         if (locationOverlay != null && locationOverlay.getMyLocation() != null) {
             ubicacionUsuario = locationOverlay.getMyLocation();
         } else {
-            // Prácticamente nunca, salvo error, pero mantenemos el fallback:
             Log.e("RUTA_DEBUG", "GPS no disponible. Usando Casco Viejo por defecto.");
             ubicacionUsuario = new GeoPoint(43.2598, -2.9244);
         }
@@ -250,7 +250,6 @@ public class MapaFragment extends Fragment {
             return;
         }
 
-        // 1. Preparamos las coordenadas
         String origen = ubicacionUsuario.getLatitude() + "," + ubicacionUsuario.getLongitude();
         String destino = destinoSeleccionado.getLatitude() + "," + destinoSeleccionado.getLongitude();
 
@@ -268,10 +267,8 @@ public class MapaFragment extends Fragment {
             case "tranvia": modo = "transit"; modoTransito = "tram"; break;
         }
 
-        // Clave API de Google Cloud
         String apiKey = "AIzaSyCgQ4kwjnt9cxqZyIOMx_vwMuK3vRYq9_s";
 
-        // 3. Hacemos la llamada con Retrofit
         DirectionsApi api = GoogleMapsRetrofitClient.getClient().create(DirectionsApi.class);
         Call<DirectionsResponse> call = api.getDirections(origen, destino, modo, modoTransito, idiomaActual, apiKey);
 
@@ -282,19 +279,15 @@ public class MapaFragment extends Fragment {
                         response.body().routes != null && !response.body().routes.isEmpty()) {
 
                     DirectionsResponse.Leg leg = response.body().routes.get(0).legs.get(0);
-                    String polylineCodificada = response.body().routes.get(0).overview_polyline.points;
 
-                    // Mostrar resumen en la cabecera
                     tvResumenRuta.setText("🕐 " + leg.duration.text + "  📍 " + leg.distance.text);
                     cardIndicaciones.setVisibility(View.VISIBLE);
 
-                    // Cargar pasos en el RecyclerView
                     recyclerIndicaciones.setLayoutManager(
                             new androidx.recyclerview.widget.LinearLayoutManager(getContext()));
                     recyclerIndicaciones.setAdapter(new IndicacionesAdapter(leg.steps));
 
-                    // Dibujar ruta
-                    dibujarRutaEnMapa(polylineCodificada);
+                    dibujarRutaMultiColor(leg.steps);
 
                 } else {
                     Toast.makeText(getContext(), "No se encontró ruta para este transporte",
@@ -309,19 +302,44 @@ public class MapaFragment extends Fragment {
         });
     }
 
-    private void dibujarRutaEnMapa(String polylineCodificada) {
-        List<GeoPoint> puntosDeRuta = decodificarPolyline(polylineCodificada);
+    /** Dibuja cada step con un color según travelMode: a pie, bici o transporte público */
+    private void dibujarRutaMultiColor(List<DirectionsResponse.Step> steps) {
+        for (Polyline p : polylines) {
+            mapView.getOverlays().remove(p);
+        }
+        polylines.clear();
 
-        if (rutaDibujadaActual != null) {
-            mapView.getOverlays().remove(rutaDibujadaActual);
+        for (DirectionsResponse.Step step : steps) {
+            if (step.polyline == null || step.polyline.points == null) continue;
+            List<GeoPoint> puntos = decodificarPolyline(step.polyline.points);
+
+            Polyline line = new Polyline();
+            line.setPoints(puntos);
+
+            int color = Color.BLUE;
+            if ("WALKING".equalsIgnoreCase(step.travelMode)) {
+                color = Color.parseColor("#33B5E5"); // azul claro
+            } else if ("BICYCLING".equalsIgnoreCase(step.travelMode)) {
+                color = Color.parseColor("#4CAF50"); // verde bici
+            } else if ("TRANSIT".equalsIgnoreCase(step.travelMode)) {
+                if (step.transitDetails != null && step.transitDetails.line != null && step.transitDetails.line.vehicle != null) {
+                    String tipo = step.transitDetails.line.vehicle.type;
+                    if ("SUBWAY".equalsIgnoreCase(tipo))      color = Color.parseColor("#FF9800"); // naranja
+                    else if ("BUS".equalsIgnoreCase(tipo))    color = Color.parseColor("#E91E63"); // rosa
+                    else if ("TRAM".equalsIgnoreCase(tipo))   color = Color.parseColor("#009688"); // teal
+                    else if ("TRAIN".equalsIgnoreCase(tipo))  color = Color.parseColor("#607D8B"); // gris
+                    else color = Color.parseColor("#9C27B0"); // púrpura
+                } else {
+                    color = Color.parseColor("#9C27B0"); // púrpura general transporte
+                }
+            }
+
+            line.setColor(color);
+            line.setWidth(12.0f);
+            polylines.add(line);
+            mapView.getOverlays().add(line);
         }
 
-        rutaDibujadaActual = new Polyline();
-        rutaDibujadaActual.setPoints(puntosDeRuta);
-        rutaDibujadaActual.setColor(Color.parseColor("#1A73E8"));
-        rutaDibujadaActual.setWidth(12.0f);
-
-        mapView.getOverlays().add(rutaDibujadaActual);
         mapView.invalidate();
     }
 
