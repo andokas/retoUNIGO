@@ -53,7 +53,7 @@ import retrofit2.Response;
 public class MapaFragment extends Fragment {
 
     private MapView mapView;
-    private MyLocationNewOverlay locationOverlay; // Puntito azul
+    private MyLocationNewOverlay locationOverlay;
     private List<Polyline> polylines = new ArrayList<>();
     private GeoPoint ubicacionUsuario = null;
     private GeoPoint destinoSeleccionado = null;
@@ -79,7 +79,7 @@ public class MapaFragment extends Fragment {
         // Guardamos argumento para usar tras cargar idioma
         argsGuardados = getArguments();
 
-        // Inicializa views básicos (no UI dependiente de idioma ni rutas todavía)
+        // Inicializa views básicos
         mapView = view.findViewById(R.id.mapView);
         cardIndicaciones = view.findViewById(R.id.cardIndicaciones);
         tvResumenRuta = view.findViewById(R.id.tvResumenRuta);
@@ -93,7 +93,7 @@ public class MapaFragment extends Fragment {
             ivFlechaPanel.setRotation(panelExpandido ? 180f : 0f);
         });
 
-        // Activa GPS (esto no depende de idioma)
+        // Activa GPS
         activarUbicacionReal();
 
         // Carga idioma y arranca inicialización UI "real" al terminar
@@ -142,7 +142,7 @@ public class MapaFragment extends Fragment {
             mapView.getController().setCenter(bilbao);
         }
 
-        cargarMarcadores(); // Esto da igual idioma
+        cargarMarcadores();
 
         ChipGroup chipGroup = view.findViewById(R.id.chipGroupTransporte);
         if (chipGroup != null) {

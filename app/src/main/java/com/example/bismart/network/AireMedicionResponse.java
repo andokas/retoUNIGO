@@ -11,7 +11,7 @@ public class AireMedicionResponse {
     public String hora;
 
     @SerializedName("ICAEstacion")
-    public String icaEstacion; // "Muy buena / Oso ona", "Buena / Ona", etc.
+    public String icaEstacion;
 
     @SerializedName("TC")
     public String temperatura;

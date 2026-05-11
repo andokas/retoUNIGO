@@ -14,10 +14,10 @@ public class AireEstacionResponse {
     public String municipio;
 
     @SerializedName("Latitude")
-    public String latitudStr; // viene como "43,32047..." con coma
+    public String latitudStr;
 
     @SerializedName("Longitude")
-    public String longitudStr; // viene como "-3,07415..." con coma
+    public String longitudStr;
 
     // Convierte la cadena con coma a double
     public double getLatitud() {

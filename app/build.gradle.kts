@@ -62,14 +62,13 @@ dependencies {
     implementation(libs.converter.gson)
     implementation(libs.adapter.rxjava3)
 
-    // RxJava (Tema 19)
+    // RxJava
     implementation(libs.rxjava.v318)
     implementation(libs.rxandroid)
 
-    // Glide (Tema 16 - Carga de imágenes)
+    // Glide
     implementation(libs.glide)
 
-    // Importamos el BoM de Firebase para gestionar versiones automáticamente
     implementation(platform(libs.firebase.bom))
 
     // Dependencias para el Backend

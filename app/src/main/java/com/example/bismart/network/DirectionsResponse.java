@@ -58,19 +58,16 @@ public class DirectionsResponse {
     public static class TransitDetails {
         @SerializedName("line")
         public Line line;
-        // Puedes añadir más campos si necesitas (nombre, arrival/departure_stop, color, etc)
     }
 
     public static class Line {
         @SerializedName("vehicle")
         public Vehicle vehicle;
-        // Puedes añadir nombre, short_name, color...
     }
 
     public static class Vehicle {
         @SerializedName("type")
         public String type; // "BUS", "SUBWAY", "TRAM", "RAIL", etc
-        // Puedes añadir "name", "icon", etc si quieres mostrarlo en la app
     }
 
     public static class Duration {

@@ -13,7 +13,7 @@ public class RetrofitClient {
             retrofit = new Retrofit.Builder()
                     .baseUrl(BASE_URL)
                     .addConverterFactory(GsonConverterFactory.create())
-                    .addCallAdapterFactory(RxJava3CallAdapterFactory.create()) // Para usar RxJava
+                    .addCallAdapterFactory(RxJava3CallAdapterFactory.create())
                     .build();
         }
         return retrofit;

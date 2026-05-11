@@ -88,7 +88,7 @@ public class CentroAdapter extends RecyclerView.Adapter<CentroAdapter.CentroView
                 case "Bici":   velocidadKmh = 15; break;
                 case "Metro":  velocidadKmh = 35; break;
                 case "Tren":   velocidadKmh = 45; break;
-                default:       velocidadKmh = 20; break; // Bus, Tranvía
+                default:       velocidadKmh = 20; break;
                 case "A pie":  velocidadKmh = 5;  break;
             }
 
