@@ -110,20 +110,27 @@ public class CentrosFragment extends Fragment {
             }
 
             adapter = new CentroAdapter(listaCentros, miUbicacion, centro -> {
-                Bundle args = new Bundle();
-                args.putDouble("lat", centro.latitud);
-                args.putDouble("lng", centro.longitud);
-                args.putString("nombre", centro.nombre);
-                args.putString("entidad", centro.entidad);
-                args.putString("ubicacion", centro.ubicacion);
+                usuarioRepository.obtenerUsuario(uidActual).addOnSuccessListener(doc -> {
+                    String transportePreferido = doc.getString("transportePreferido");
 
-                MapaFragment mapaFragment = new MapaFragment();
-                mapaFragment.setArguments(args);
+                    Bundle args = new Bundle();
+                    args.putDouble("lat", centro.latitud);
+                    args.putDouble("lng", centro.longitud);
+                    args.putString("nombre", centro.nombre);
+                    args.putString("entidad", centro.entidad);
+                    args.putString("ubicacion", centro.ubicacion);
+                    if (transportePreferido != null) {
+                        args.putString("transportePreferido", transportePreferido);
+                    }
 
-                requireActivity().getSupportFragmentManager()
-                        .beginTransaction()
-                        .replace(R.id.fragmentContainer, mapaFragment)
-                        .commit();
+                    MapaFragment mapaFragment = new MapaFragment();
+                    mapaFragment.setArguments(args);
+
+                    requireActivity().getSupportFragmentManager()
+                            .beginTransaction()
+                            .replace(R.id.fragmentContainer, mapaFragment)
+                            .commit();
+                });
             });
 
             // Pasar favoritos al adapter

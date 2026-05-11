@@ -4,7 +4,6 @@ import android.Manifest;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Color;
-import android.graphics.PorterDuff;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
@@ -12,6 +11,9 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
+import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
@@ -21,50 +23,46 @@ import androidx.fragment.app.Fragment;
 import com.example.bismart.R;
 import com.example.bismart.models.CentroUniversitario;
 import com.example.bismart.repositories.CentroRepository;
+import com.example.bismart.network.DirectionsApi;
+import com.example.bismart.network.DirectionsResponse;
+import com.example.bismart.network.GoogleMapsRetrofitClient;
+import com.example.bismart.repositories.UsuarioRepository;
+import com.example.bismart.ui.IndicacionesAdapter;
+import com.google.android.material.chip.ChipGroup;
+import com.google.firebase.auth.FirebaseAuth;
 
 import org.osmdroid.config.Configuration;
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory;
 import org.osmdroid.util.GeoPoint;
 import org.osmdroid.views.MapView;
 import org.osmdroid.views.overlay.Marker;
+import org.osmdroid.views.overlay.Polyline;
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider;
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay;
 
-import com.example.bismart.network.DirectionsApi;
-import com.example.bismart.network.DirectionsResponse;
-import com.example.bismart.network.GoogleMapsRetrofitClient;
+import java.util.ArrayList;
+import java.util.List;
+
+import androidx.cardview.widget.CardView;
+import androidx.recyclerview.widget.RecyclerView;
+
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
-import org.osmdroid.views.overlay.Polyline;
-
-import android.graphics.Color;
-import android.widget.ImageView;
-import android.widget.TextView;
-import android.widget.Toast;
-
-import com.example.bismart.repositories.UsuarioRepository;
-import com.example.bismart.ui.IndicacionesAdapter;
-import com.google.android.material.chip.ChipGroup;
-import com.google.firebase.auth.FirebaseAuth;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public class MapaFragment extends Fragment {
 
     private MapView mapView;
     private MyLocationNewOverlay locationOverlay; // El puntito azul
     private Polyline rutaDibujadaActual = null;
-    private org.osmdroid.util.GeoPoint ubicacionUsuario = null;   //  GPS
-    private org.osmdroid.util.GeoPoint destinoSeleccionado = null; // La universidad elegida
-    private androidx.cardview.widget.CardView cardIndicaciones;
+    private GeoPoint ubicacionUsuario = null;   //  GPS
+    private GeoPoint destinoSeleccionado = null; // La universidad elegida
+    private CardView cardIndicaciones;
     private TextView tvResumenRuta;
-    private androidx.recyclerview.widget.RecyclerView recyclerIndicaciones;
+    private RecyclerView recyclerIndicaciones;
     private ImageView ivFlechaPanel;
     private boolean panelExpandido = false;
     private String idiomaActual = "es"; // español por defecto
-
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -94,21 +92,22 @@ public class MapaFragment extends Fragment {
         // 1. Activar el puntito azul (Ubicación real)
         activarUbicacionReal();
 
-        // 2. Comprobar si venimos de la lista con una facultad seleccionada
+        // 2. Cargar argumentos
         Bundle args = getArguments();
+        String transportePref = null;
+        String nombre = null;
+
         if (args != null && args.containsKey("lat")) {
             double lat = args.getDouble("lat");
             double lng = args.getDouble("lng");
-            String nombre = args.getString("nombre");
-
+            nombre = args.getString("nombre");
             destinoSeleccionado = new GeoPoint(lat, lng);
 
             // Centramos el mapa en la facultad
             mapView.getController().setZoom(16.0);
             mapView.getController().setCenter(destinoSeleccionado);
-            Toast.makeText(getContext(), "Destino: " + nombre + "\nElige transporte arriba", Toast.LENGTH_LONG).show();
         } else {
-            // Si abrimos el mapa normal, centramos en Bilbao
+            // Abrir mapa general en Bilbao
             GeoPoint bilbao = new GeoPoint(43.2630, -2.9350);
             mapView.getController().setZoom(13.0);
             mapView.getController().setCenter(bilbao);
@@ -117,7 +116,7 @@ public class MapaFragment extends Fragment {
         // 3. Cargar marcadores
         cargarMarcadores();
 
-        // 4. ESCUCHAR LOS BOTONES DE TRANSPORTE
+        // 4. Chips de transporte y selección automática
         ChipGroup chipGroup = view.findViewById(R.id.chipGroupTransporte);
         if (chipGroup != null) {
             chipGroup.setOnCheckedStateChangeListener((group, checkedIds) -> {
@@ -137,7 +136,42 @@ public class MapaFragment extends Fragment {
             });
         }
 
-        // 5. CARGAR IDIOMA
+        // Marcar automáticamente el chip favorito si viene en el bundle:
+        if (args != null && args.containsKey("transportePreferido")) {
+            transportePref = args.getString("transportePreferido");
+            int chipId = -1;
+            if (chipGroup != null && transportePref != null && !transportePref.isEmpty()) {
+                switch (transportePref) {
+                    case "pie":      chipId = R.id.chipPie; break;
+                    case "bici":     chipId = R.id.chipBici; break;
+                    case "bus":      chipId = R.id.chipBus; break;
+                    case "metro":    chipId = R.id.chipMetro; break;
+                    case "tren":     chipId = R.id.chipTren; break;
+                    case "tranvia":  chipId = R.id.chipTranvia; break;
+                }
+                if (chipId != -1) {
+                    chipGroup.check(chipId);
+                }
+            }
+
+            // ⚡ ESPERAR a posición GPS real ANTES de calcular la ruta automática:
+            if (transportePref != null && !transportePref.isEmpty()) {
+                // Puede que locationOverlay aún no esté instanciado, así que espera a que lo esté desarrollando
+                final String transporteFinal = transportePref;
+                // Post a delayed to wait until locationOverlay is ready (rare edge-case)
+                mapView.postDelayed(() -> {
+                    if (locationOverlay != null) {
+                        locationOverlay.runOnFirstFix(() -> {
+                            requireActivity().runOnUiThread(() -> calcularRuta(transporteFinal));
+                        });
+                    }
+                }, 200); // 200ms es seguro, ajusta si alguna vez hay Warning
+            }
+        } else if (nombre != null) {
+            Toast.makeText(getContext(), "Destino: " + nombre + "\nElige transporte arriba", Toast.LENGTH_LONG).show();
+        }
+
+        // 5. CARGAR IDIOMA del usuario
         String uid = FirebaseAuth.getInstance().getCurrentUser().getUid();
         new UsuarioRepository().obtenerUsuario(uid)
                 .addOnSuccessListener(doc -> {
@@ -175,15 +209,8 @@ public class MapaFragment extends Fragment {
                     if (icon != null) {
                         // Extraer el Bitmap de la imagen
                         Bitmap bitmap = ((BitmapDrawable) icon).getBitmap();
-
-                        // REDIMENSIONAR: Aquí ajustas el tamaño. 40x40
                         Bitmap scaledBitmap = Bitmap.createScaledBitmap(bitmap, 40, 40, false);
-
-                        // Volver a convertirlo en Drawable para el marcador
                         Drawable scaledIcon = new BitmapDrawable(getResources(), scaledBitmap).mutate();
-
-
-                        // Ponerle el icono al marcador
                         marker.setIcon(scaledIcon);
                     }
 
@@ -270,21 +297,17 @@ public class MapaFragment extends Fragment {
     }
 
     private void dibujarRutaEnMapa(String polylineCodificada) {
-        // 1. Desciframos la ruta
         List<GeoPoint> puntosDeRuta = decodificarPolyline(polylineCodificada);
 
-        // 2. Si ya había una ruta pintada antes, la borramos para no superponerlas
         if (rutaDibujadaActual != null) {
             mapView.getOverlays().remove(rutaDibujadaActual);
         }
 
-        // 3. Creamos la línea (Polyline)
         rutaDibujadaActual = new Polyline();
         rutaDibujadaActual.setPoints(puntosDeRuta);
         rutaDibujadaActual.setColor(Color.parseColor("#1A73E8"));
-        rutaDibujadaActual.setWidth(12.0f); // Grosor de la línea
+        rutaDibujadaActual.setWidth(12.0f);
 
-        // 4. La añadimos al mapa y refrescamos
         mapView.getOverlays().add(rutaDibujadaActual);
         mapView.invalidate();
     }
