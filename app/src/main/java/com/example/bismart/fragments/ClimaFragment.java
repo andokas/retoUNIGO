@@ -25,7 +25,11 @@ import com.example.bismart.network.OpenWeatherRetrofitClient;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -34,14 +38,59 @@ import retrofit2.Response;
 public class ClimaFragment extends Fragment {
 
     private static final String API_KEY = "7dec46e36174f031adcef4826c340199";
-
-    // Coordenadas de Bilbao por defecto
     private static final double LAT_BILBAO = 43.2630;
     private static final double LON_BILBAO = -2.9350;
 
     private TextView tvTemperatura, tvLluvia, tvViento, tvHumedad, tvEstacion, tvAviso, tvEstacionAire, tvIndiceCalidad, tvDescripcionCalidad, tvConsejoAire;
     private CardView cardAviso, cardIndiceCalidad;
     private FusedLocationProviderClient fusedLocationClient;
+    private static final Set<String> NOMBRES_ESTACIONES_CON_DATOS = new HashSet<>(Arrays.asList(
+            "ABANTO",
+            "AMURRIO",
+            "ARRIGORRIAGA",
+            "ATOCHA",
+            "AZPEITIA",
+            "BARAKALDO",
+            "BASURTO",
+            "BERMEO",
+            "DURANGO",
+            "EIBAR",
+            "ERANDIO",
+            "ERRENTERIA",
+            "GETXO",
+            "GALDAKAO",
+            "GALDAKAO B",
+            "IRUN",
+            "IZARRA",
+            "KAREAGA",
+            "LAVAGA",
+            "LEGAZPI",
+            "MAIRAGA",
+            "MIRAVALLES",
+            "MUNGIA",
+            "ORTUELLA",
+            "PORTUGALETE",
+            "SAKANA",
+            "SALBURUA",
+            "SANTURTZI",
+            "UNBE",
+            "UNIDAD MOVIL 1",
+            "UNIDAD MOVIL 3",
+            "VALLE DE TRAPAGA",
+            "VDA ARETXABALETA",
+            "VDA AÑASTRA",
+            "VDA BASAURI",
+            "VDA BASURTO",
+            "VDA EIBAR",
+            "VDA GASTEIZ",
+            "VDA IRUN",
+            "VDA LODOSA",
+            "VDA PORTU",
+            "VDA SANTURTZI",
+            "VDA TOLOSA",
+            "ZALLA",
+            "ZARAUTZ"
+    ));
 
     @Nullable
     @Override
@@ -109,27 +158,28 @@ public class ClimaFragment extends Fragment {
                 });
     }
 
+    private List<AireEstacionResponse> filtrarEstacionesConDatos(List<AireEstacionResponse> estaciones) {
+        List<AireEstacionResponse> resultado = new ArrayList<>();
+        for (AireEstacionResponse est : estaciones) {
+            String nombreLimpio = quitarTildes(est.nombre);
+            if (NOMBRES_ESTACIONES_CON_DATOS.contains(nombreLimpio)) {
+                resultado.add(est);
+            }
+        }
+        return resultado;
+    }
+
     private void mostrarDatos(OpenWeatherResponse data) {
-        // Temperatura
         tvTemperatura.setText(String.format("%.1f°C", data.main.temp));
-
-        // Humedad
         tvHumedad.setText(String.format("%.0f%%", data.main.humidity));
-
-        // Viento (m/s → km/h)
         double vientoKmh = data.wind.speed * 3.6;
         tvViento.setText(String.format("%.1f km/h", vientoKmh));
-
-        // Lluvia (puede ser null si no llueve)
         double lluvia = data.rain != null ? data.rain.oneHour : 0;
         tvLluvia.setText(String.format("%.1f mm", lluvia));
-
-        // Nombre de la ciudad
         String descripcion = data.weather != null && !data.weather.isEmpty()
                 ? data.weather.get(0).description : "";
         tvEstacion.setText("📍 " + data.cityName + " · " + descripcion);
 
-        // Aviso si llueve o viento fuerte
         if (lluvia > 0 || vientoKmh > 40) {
             String aviso = lluvia > 0
                     ? "🌧 Está lloviendo. Considera usar el autobús o tranvía."
@@ -150,10 +200,19 @@ public class ClimaFragment extends Fragment {
                                    Response<List<AireEstacionResponse>> response) {
                 Log.d("AIRE_DEBUG", "2. Código: " + response.code());
                 if (response.isSuccessful() && response.body() != null) {
-                    Log.d("AIRE_DEBUG", "3. Estaciones recibidas: " + response.body().size());
-                    AireEstacionResponse cercana = encontrarEstacionMasCercana(response.body(), location);
+                    // FILTRA AQUÍ
+                    List<AireEstacionResponse> estacionesConDatos = filtrarEstacionesConDatos(response.body());
+                    Log.d("AIRE_DEBUG", "Estaciones con datos: " + estacionesConDatos.size());
+
+                    if (estacionesConDatos.isEmpty()) {
+                        Log.e("AIRE_DEBUG", "No hay estaciones con datos disponibles.");
+                        // Muestra aviso al usuario si quieres
+                        return;
+                    }
+                    AireEstacionResponse cercana = encontrarEstacionMasCercana(estacionesConDatos, location);
                     if (cercana != null) {
                         Log.d("AIRE_DEBUG", "4. Estación más cercana: " + cercana.nombre);
+                        Log.d("AIRE_DEBUG", "Antes de pedir medición. Nombre para consulta: " + cercana.nombre);
                         obtenerMedicionAire(cercana);
                     }
                 } else {
@@ -164,6 +223,7 @@ public class ClimaFragment extends Fragment {
                     }
                 }
             }
+
             @Override
             public void onFailure(Call<List<AireEstacionResponse>> call, Throwable t) {
                 Log.e("AIRE_DEBUG", "FALLO: " + t.getMessage());
@@ -176,8 +236,8 @@ public class ClimaFragment extends Fragment {
         if (estaciones == null || estaciones.isEmpty()) return null;
         AireEstacionResponse cercana = estaciones.get(0);
         double minDist = Double.MAX_VALUE;
-        double lat = miUbicacion != null ? miUbicacion.getLatitude() : 43.2630;
-        double lon = miUbicacion != null ? miUbicacion.getLongitude() : -2.9350;
+        double lat = miUbicacion != null ? miUbicacion.getLatitude() : LAT_BILBAO;
+        double lon = miUbicacion != null ? miUbicacion.getLongitude() : LON_BILBAO;
         for (AireEstacionResponse e : estaciones) {
             double dist = Math.sqrt(Math.pow(e.getLatitud() - lat, 2) + Math.pow(e.getLongitud() - lon, 2));
             if (dist < minDist) { minDist = dist; cercana = e; }
@@ -186,33 +246,56 @@ public class ClimaFragment extends Fragment {
     }
 
     private void obtenerMedicionAire(AireEstacionResponse estacion) {
+        // El nombre del archivo debe ir sin tildes ni eñes ni diéresis
+        String nombreArchivo = quitarTildes(estacion.nombre);
+        Log.d("AIRE_DEBUG", "5. Pidiendo medición para archivo: '" + nombreArchivo + "'");
         tvEstacionAire.setText("📍 " + estacion.nombre + " · " + estacion.municipio);
 
         AireApi api = AireRetrofitClient.getClient().create(AireApi.class);
-        api.getMedicion(estacion.nombre).enqueue(new Callback<List<AireMedicionResponse>>() {
+        api.getMedicion(nombreArchivo).enqueue(new Callback<List<AireMedicionResponse>>() {
             @Override
             public void onResponse(Call<List<AireMedicionResponse>> call,
                                    Response<List<AireMedicionResponse>> response) {
+                Log.d("AIRE_DEBUG", "6. Código medición: " + response.code());
                 if (response.isSuccessful() && response.body() != null) {
-                    // Buscar la lectura más reciente que tenga ICAEstacion
+                    Log.d("AIRE_DEBUG", "7. Lecturas: " + response.body().size());
                     for (AireMedicionResponse lectura : response.body()) {
+                        Log.d("AIRE_DEBUG", "ICA: " + lectura.icaEstacion);
                         if (lectura.icaEstacion != null && !lectura.icaEstacion.isEmpty()) {
                             mostrarIndiceCalidad(lectura.icaEstacion);
                             return;
                         }
                     }
+                    Log.e("AIRE_DEBUG", "Ninguna lectura tiene ICAEstacion");
+                } else {
+                    try {
+                        Log.e("AIRE_DEBUG", "Error body: " + response.errorBody().string());
+                    } catch (Exception e) {
+                        Log.e("AIRE_DEBUG", "Error código: " + response.code());
+                    }
                 }
             }
             @Override
             public void onFailure(Call<List<AireMedicionResponse>> call, Throwable t) {
-                Log.e("AIRE", "Error medición: " + t.getMessage());
+                Log.e("AIRE_DEBUG", "Error medición: " + t.getMessage());
             }
         });
     }
 
+    // Función para quitar tildes y eñes, necesaria para que la llamada coincida con los archivos reales.
+    public static String quitarTildes(String input) {
+        if (input == null) return null;
+        return input
+                .replace("Á", "A").replace("É", "E").replace("Í", "I")
+                .replace("Ó", "O").replace("Ú", "U")
+                .replace("á", "a").replace("é", "e").replace("í", "i")
+                .replace("ó", "o").replace("ú", "u")
+                .replace("Ü", "U").replace("ü", "u")
+                .replace("Ñ", "N").replace("ñ", "n");
+    }
+
+
     private void mostrarIndiceCalidad(String ica) {
-        // El ICA viene como "Muy buena / Oso ona", "Buena / Ona", etc.
-        // Cogemos solo la parte en español (antes del /)
         String[] partes = ica.split("/");
         String descripcion = partes[0].trim();
 
