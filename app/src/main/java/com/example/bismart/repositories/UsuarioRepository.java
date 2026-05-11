@@ -7,6 +7,7 @@ import com.google.android.gms.tasks.Task;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QuerySnapshot;
+// import com.google.firebase.firestore.SetOptions;
 
 public class UsuarioRepository {
 
@@ -70,5 +71,18 @@ public class UsuarioRepository {
                 .collection("favoritos")
                 .document(nombreCentro)
                 .delete();
+    }
+
+
+    public com.google.android.gms.tasks.Task<Void> actualizarDatosPerfil(String documentId, String nuevoNombre, String nuevoEmail) {
+        java.util.Map<String, Object> updates = new java.util.HashMap<>();
+        updates.put("nombre", nuevoNombre);
+        updates.put("email", nuevoEmail);
+
+
+
+        return db.collection(COLECCION)
+                .document(documentId)
+                .set(updates, com.google.firebase.firestore.SetOptions.merge());
     }
 }

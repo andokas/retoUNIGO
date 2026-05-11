@@ -56,7 +56,7 @@ public class MapaFragment extends Fragment {
     private MapView mapView;
     private MyLocationNewOverlay locationOverlay; // El puntito azul
     private Polyline rutaDibujadaActual = null;
-    private org.osmdroid.util.GeoPoint ubicacionUsuario = null;   // Tu GPS
+    private org.osmdroid.util.GeoPoint ubicacionUsuario = null;   //  GPS
     private org.osmdroid.util.GeoPoint destinoSeleccionado = null; // La universidad elegida
     private androidx.cardview.widget.CardView cardIndicaciones;
     private TextView tvResumenRuta;
@@ -133,7 +133,7 @@ public class MapaFragment extends Fragment {
                 else if (idSeleccionado == R.id.chipTren) medio = "tren";
                 else if (idSeleccionado == R.id.chipTranvia) medio = "tranvia";
 
-                calcularRuta(medio); // ¡AHORA SÍ LLAMAMOS A LA RUTA!
+                calcularRuta(medio); //  LLAMAMOS A LA RUTA
             });
         }
 
@@ -176,7 +176,7 @@ public class MapaFragment extends Fragment {
                         // Extraer el Bitmap de la imagen
                         Bitmap bitmap = ((BitmapDrawable) icon).getBitmap();
 
-                        // REDIMENSIONAR: Aquí ajustas el tamaño. 80x80 suele quedar perfecto.
+                        // REDIMENSIONAR: Aquí ajustas el tamaño. 40x40
                         Bitmap scaledBitmap = Bitmap.createScaledBitmap(bitmap, 40, 40, false);
 
                         // Volver a convertirlo en Drawable para el marcador

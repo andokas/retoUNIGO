@@ -1,10 +1,15 @@
 package com.example.bismart.fragments;
 
+import android.annotation.SuppressLint;
+import android.app.AlertDialog;
 import android.content.Intent;
 import android.os.Bundle;
+import android.text.InputType;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TextView;
@@ -20,15 +25,18 @@ import com.example.bismart.repositories.UsuarioRepository;
 import com.google.android.material.button.MaterialButton;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.auth.UserProfileChangeRequest;
 
 public class PerfilFragment extends Fragment {
 
     private TextView tvNombre, tvEmail;
     private RadioGroup radioGroupTransporte, radioGroupIdioma;
-    private MaterialButton btnGuardarTransporte, btnGuardarIdioma, btnCerrarSesion;
+    private MaterialButton btnGuardarTransporte, btnGuardarIdioma, btnCerrarSesion, btnEditarPerfil;
     private UsuarioRepository usuarioRepository;
     private String uidActual;
+    private FirebaseUser user;
 
+    @SuppressLint("WrongViewCast")
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -41,14 +49,14 @@ public class PerfilFragment extends Fragment {
         btnGuardarTransporte = view.findViewById(R.id.btnGuardarTransporte);
         btnGuardarIdioma = view.findViewById(R.id.btnGuardarIdioma);
         btnCerrarSesion = view.findViewById(R.id.btnCerrarSesion);
+        btnEditarPerfil = view.findViewById(R.id.btnEditarPerfil);
 
         usuarioRepository = new UsuarioRepository();
+        user = FirebaseAuth.getInstance().getCurrentUser();
 
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user != null) {
             uidActual = user.getUid();
-            tvNombre.setText(user.getDisplayName() != null ? user.getDisplayName() : "Usuario");
-            tvEmail.setText(user.getEmail());
+            actualizarTextosPantalla();
             cargarPreferenciasGuardadas();
         }
 
@@ -56,15 +64,121 @@ public class PerfilFragment extends Fragment {
         btnGuardarIdioma.setOnClickListener(v -> guardarIdioma());
         btnCerrarSesion.setOnClickListener(v -> cerrarSesion());
 
+        //  Al hacer clic, abrimos la ventana emergente
+        btnEditarPerfil.setOnClickListener(v -> mostrarDialogoEdicion());
+
         return view;
     }
+
+    private void actualizarTextosPantalla() {
+        if (user != null) {
+            tvNombre.setText(user.getDisplayName() != null && !user.getDisplayName().isEmpty() ? user.getDisplayName() : "Usuario");
+            tvEmail.setText(user.getEmail());
+        }
+    }
+
+
+    private void mostrarDialogoEdicion() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(requireContext());
+        builder.setTitle("Editar Perfil");
+
+        // Crear el contenedor
+        LinearLayout layout = new LinearLayout(requireContext());
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(50, 40, 50, 10);
+
+        // 1. Campo Nombre
+        final EditText etNombre = new EditText(requireContext());
+        etNombre.setHint("Nuevo Nombre de Usuario");
+        etNombre.setText(user.getDisplayName());
+        layout.addView(etNombre);
+
+        // 2. Campo Correo
+        final EditText etEmail = new EditText(requireContext());
+        etEmail.setHint("Nuevo Correo Electrónico");
+        etEmail.setText(user.getEmail());
+        layout.addView(etEmail);
+
+        // 3. Campo Contraseña ACTUAL (Obligatorio para validar cambios)
+        final EditText etPassActual = new EditText(requireContext());
+        etPassActual.setHint("Contraseña Actual");
+        etPassActual.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        layout.addView(etPassActual);
+
+        // 4. Campo Nueva Contraseña (Opcional)
+        final EditText etPassNueva = new EditText(requireContext());
+        etPassNueva.setHint("Nueva Contraseña");
+        etPassNueva.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        layout.addView(etPassNueva);
+
+        builder.setView(layout);
+
+        builder.setPositiveButton("Guardar Cambios", (dialog, which) -> {
+            String nuevoNombre = etNombre.getText().toString().trim();
+            String nuevoEmail = etEmail.getText().toString().trim();
+            String passActual = etPassActual.getText().toString().trim();
+            String passNueva = etPassNueva.getText().toString().trim();
+
+            if (nuevoNombre.isEmpty() || nuevoEmail.isEmpty() || passActual.isEmpty()) {
+                Toast.makeText(getContext(), "Rellena los campos obligatorios", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            // Llamamos a la lógica de actualización con re-autenticación
+            actualizarPerfilCompleto(nuevoNombre, nuevoEmail, passActual, passNueva);
+        });
+
+        builder.setNegativeButton("Cancelar", null);
+        builder.show();
+    }
+
+    private void actualizarPerfilCompleto(String nombre, String email, String passActual, String passNueva) {
+        if (user == null) return;
+
+        // 1. RE-AUTENTICACIÓN: Validamos la contraseña actual
+        com.google.firebase.auth.AuthCredential credential =
+                com.google.firebase.auth.EmailAuthProvider.getCredential(user.getEmail(), passActual);
+
+        user.reauthenticate(credential).addOnCompleteListener(task -> {
+            if (task.isSuccessful()) {
+                // Si la clave actual es correcta, empezamos las actualizaciones:
+
+                // A. Cambiar Nombre en el Perfil de Auth
+                UserProfileChangeRequest profileUpdates = new UserProfileChangeRequest.Builder()
+                        .setDisplayName(nombre).build();
+                user.updateProfile(profileUpdates);
+
+                // B. Cambiar Email en Auth
+                user.updateEmail(email).addOnCompleteListener(taskEmail -> {
+                    if (taskEmail.isSuccessful()) {
+
+                        // C. Cambiar Contraseña en Auth (si ha escrito una nueva)
+                        if (!passNueva.isEmpty()) {
+                            user.updatePassword(passNueva);
+                        }
+
+                        // D. Guardar en Firestore (para que los datos coincidan)
+                        usuarioRepository.actualizarDatosPerfil(uidActual, nombre, email)
+                                .addOnSuccessListener(aVoid -> {
+                                    actualizarTextosPantalla(); // Refrescar los TextViews
+                                    Toast.makeText(getContext(), "Perfil actualizado correctamente", Toast.LENGTH_SHORT).show();
+                                });
+                    } else {
+                        Toast.makeText(getContext(), "Error al cambiar email: " + taskEmail.getException().getMessage(), Toast.LENGTH_LONG).show();
+                    }
+                });
+
+            } else {
+                Toast.makeText(getContext(), "Contraseña actual incorrecta", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
 
     private void cargarPreferenciasGuardadas() {
         usuarioRepository.obtenerUsuario(uidActual)
                 .addOnSuccessListener(doc -> {
                     if (!doc.exists()) return;
-
-                    // Transporte
                     String transporte = doc.getString("transportePreferido");
                     if (transporte != null) {
                         switch (transporte) {
@@ -74,8 +188,6 @@ public class PerfilFragment extends Fragment {
                             case "tranvia": radioGroupTransporte.check(R.id.radioTranvia);break;
                         }
                     }
-
-                    // Idioma
                     String idioma = doc.getString("idioma");
                     if (idioma != null) {
                         switch (idioma) {
@@ -84,7 +196,6 @@ public class PerfilFragment extends Fragment {
                             case "en": radioGroupIdioma.check(R.id.radioIngles);  break;
                         }
                     } else {
-                        // Español por defecto
                         radioGroupIdioma.check(R.id.radioEspanol);
                     }
                 });
@@ -92,30 +203,16 @@ public class PerfilFragment extends Fragment {
 
     private void guardarTransporte() {
         int selectedId = radioGroupTransporte.getCheckedRadioButtonId();
-        if (selectedId == -1) {
-            Toast.makeText(getContext(), "Selecciona un modo de transporte", Toast.LENGTH_SHORT).show();
-            return;
-        }
+        if (selectedId == -1) return;
         String transporte = ((RadioButton) radioGroupTransporte.findViewById(selectedId)).getTag().toString();
-        usuarioRepository.actualizarTransporte(uidActual, transporte)
-                .addOnSuccessListener(unused ->
-                        Toast.makeText(getContext(), "Transporte guardado ✓", Toast.LENGTH_SHORT).show())
-                .addOnFailureListener(e ->
-                        Toast.makeText(getContext(), "Error al guardar", Toast.LENGTH_SHORT).show());
+        usuarioRepository.actualizarTransporte(uidActual, transporte).addOnSuccessListener(unused -> Toast.makeText(getContext(), "Transporte guardado ✓", Toast.LENGTH_SHORT).show());
     }
 
     private void guardarIdioma() {
         int selectedId = radioGroupIdioma.getCheckedRadioButtonId();
-        if (selectedId == -1) {
-            Toast.makeText(getContext(), "Selecciona un idioma", Toast.LENGTH_SHORT).show();
-            return;
-        }
+        if (selectedId == -1) return;
         String idioma = ((RadioButton) radioGroupIdioma.findViewById(selectedId)).getTag().toString();
-        usuarioRepository.actualizarIdioma(uidActual, idioma)
-                .addOnSuccessListener(unused ->
-                        Toast.makeText(getContext(), "Idioma guardado ✓", Toast.LENGTH_SHORT).show())
-                .addOnFailureListener(e ->
-                        Toast.makeText(getContext(), "Error al guardar", Toast.LENGTH_SHORT).show());
+        usuarioRepository.actualizarIdioma(uidActual, idioma).addOnSuccessListener(unused -> Toast.makeText(getContext(), "Idioma guardado ✓", Toast.LENGTH_SHORT).show());
     }
 
     private void cerrarSesion() {
