@@ -11,6 +11,7 @@ import com.example.bismart.fragments.ClimaFragment;
 import com.example.bismart.fragments.MapaFragment;
 import com.example.bismart.fragments.CentrosFragment;
 import com.example.bismart.fragments.PerfilFragment;
+import com.example.bismart.utils.LocaleHelper;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -32,6 +33,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        LocaleHelper.aplicarIdiomaGuardado(this);
         super.onCreate(savedInstanceState);
 
         // Comprobamos si hay sesión en Firebase

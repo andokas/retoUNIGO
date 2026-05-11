@@ -32,42 +32,42 @@
             style="@style/Widget.MaterialComponents.Chip.Choice"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="🚶 A pie"/>
+            android:text="@string/transporte_pie"/>
 
         <com.google.android.material.chip.Chip
             android:id="@+id/chipBici"
             style="@style/Widget.MaterialComponents.Chip.Choice"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="🚲 Bici"/>
+            android:text="@string/transporte_bici"/>
 
         <com.google.android.material.chip.Chip
             android:id="@+id/chipBus"
             style="@style/Widget.MaterialComponents.Chip.Choice"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="🚌 Bus"/>
+            android:text="@string/transporte_bus"/>
 
         <com.google.android.material.chip.Chip
             android:id="@+id/chipMetro"
             style="@style/Widget.MaterialComponents.Chip.Choice"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="🚇 Metro"/>
+            android:text="@string/transporte_metro"/>
 
         <com.google.android.material.chip.Chip
             android:id="@+id/chipTren"
             style="@style/Widget.MaterialComponents.Chip.Choice"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="🚆 Tren"/>
+            android:text="@string/transporte_tren"/>
 
         <com.google.android.material.chip.Chip
             android:id="@+id/chipTranvia"
             style="@style/Widget.MaterialComponents.Chip.Choice"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="🚋 Tranvía"/>
+            android:text="@string/transporte_tranvia"/>
 
     </com.google.android.material.chip.ChipGroup>
 
@@ -107,7 +107,7 @@
                     android:textColor="#FFFFFF"
                     android:textStyle="bold"
                     android:textSize="14sp"
-                    android:text="Calculando ruta..."/>
+                    android:text="@string/aire_calculando"/>
 
                 <ImageView
                     android:id="@+id/ivFlechaPanel"

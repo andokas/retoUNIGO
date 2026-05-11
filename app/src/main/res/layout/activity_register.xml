@@ -35,7 +35,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="BiSmart"
+                android:text="@string/app_name"
                 android:textSize="36sp"
                 android:textStyle="bold"
                 android:textColor="#FFFFFF"
@@ -59,7 +59,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Crear cuenta"
+                        android:text="@string/registro_titulo"
                         android:textSize="20sp"
                         android:textStyle="bold"
                         android:textColor="#1A1A2E"
@@ -68,7 +68,7 @@
                     <com.google.android.material.textfield.TextInputLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="Nombre completo"
+                        android:hint="@string/registro_nombre"
                         android:background="@android:color/transparent"
                         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                         android:layout_marginBottom="14dp">
@@ -82,7 +82,7 @@
                     <com.google.android.material.textfield.TextInputLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="Email"
+                        android:hint="@string/login_email"
                         android:background="@android:color/transparent"
                         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                         android:layout_marginBottom="14dp">
@@ -96,7 +96,7 @@
                     <com.google.android.material.textfield.TextInputLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="Contraseña"
+                        android:hint="@string/login_password"
                         android:background="@android:color/transparent"
                         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                         app:passwordToggleEnabled="true"
@@ -111,7 +111,7 @@
                     <com.google.android.material.textfield.TextInputLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="Confirmar contraseña"
+                        android:hint="@string/registro_confirmar"
                         android:background="@android:color/transparent"
                         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                         app:passwordToggleEnabled="true"
@@ -127,7 +127,7 @@
                         android:id="@+id/btnRegister"
                         android:layout_width="match_parent"
                         android:layout_height="52dp"
-                        android:text="Crear cuenta"
+                        android:text="@string/registro_boton"
                         android:textSize="16sp"
                         app:cornerRadius="12dp"/>
 
@@ -138,7 +138,7 @@
                 android:id="@+id/tvGoToLogin"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="¿Ya tienes cuenta? Inicia sesión"
+                android:text="@string/registro_login"
                 android:textColor="#FFFFFF"
                 android:textSize="14sp"
                 android:padding="12dp"

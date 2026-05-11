@@ -39,15 +39,15 @@
                     android:layout_height="wrap_content"
                     android:textSize="20sp"
                     android:textStyle="bold"
-                    android:textColor="#1A1A2E"/>
+                    android:textColor="#1A1A2E"
+                    android:layout_marginBottom="4dp"/>
 
                 <TextView
                     android:id="@+id/tvEmailUsuario"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textSize="14sp"
-                    android:textColor="#888888"
-                    android:layout_marginTop="4dp"/>
+                    android:textColor="#888888"/>
 
             </LinearLayout>
         </androidx.cardview.widget.CardView>
@@ -69,7 +69,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Modo de transporte preferido"
+                    android:text="@string/perfil_transporte"
                     android:textSize="16sp"
                     android:textStyle="bold"
                     android:textColor="#1A1A2E"
@@ -85,7 +85,7 @@
                         android:id="@+id/radioPie"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="🚶 A pie"
+                        android:text="@string/transporte_pie"
                         android:textSize="15sp"
                         android:padding="8dp"
                         android:tag="pie"/>
@@ -94,7 +94,7 @@
                         android:id="@+id/radioBici"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="🚲 En bicicleta"
+                        android:text="@string/transporte_bici"
                         android:textSize="15sp"
                         android:padding="8dp"
                         android:tag="bici"/>
@@ -103,7 +103,7 @@
                         android:id="@+id/radioBus"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="🚌 En autobús"
+                        android:text="@string/transporte_bus"
                         android:textSize="15sp"
                         android:padding="8dp"
                         android:tag="bus"/>
@@ -112,7 +112,7 @@
                         android:id="@+id/radioMetro"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="🚇 En metro"
+                        android:text="@string/transporte_metro"
                         android:textSize="15sp"
                         android:padding="8dp"
                         android:tag="bus"/>
@@ -121,7 +121,7 @@
                         android:id="@+id/radioTren"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="🚆 En tren"
+                        android:text="@string/transporte_tren"
                         android:textSize="15sp"
                         android:padding="8dp"
                         android:tag="bus"/>
@@ -130,7 +130,7 @@
                         android:id="@+id/radioTranvia"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="🚋 En tranvía"
+                        android:text="@string/transporte_tranvia"
                         android:textSize="15sp"
                         android:padding="8dp"
                         android:tag="tranvia"/>
@@ -141,7 +141,7 @@
                     android:id="@+id/btnGuardarTransporte"
                     android:layout_width="match_parent"
                     android:layout_height="52dp"
-                    android:text="Guardar preferencia"
+                    android:text="@string/perfil_guardar_transporte"
                     android:layout_marginTop="16dp"
                     app:cornerRadius="12dp"/>
 
@@ -165,7 +165,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Idioma de las indicaciones"
+                    android:text="@string/perfil_idioma"
                     android:textSize="16sp"
                     android:textStyle="bold"
                     android:textColor="#1A1A2E"
@@ -181,7 +181,7 @@
                         android:id="@+id/radioEspanol"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="🇪🇸 Español"
+                        android:text="@string/idioma_espanol"
                         android:textSize="15sp"
                         android:padding="8dp"
                         android:tag="es"/>
@@ -190,7 +190,7 @@
                         android:id="@+id/radioEuskera"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="🏴 Euskera"
+                        android:text="@string/idioma_euskera"
                         android:textSize="15sp"
                         android:padding="8dp"
                         android:tag="eu"/>
@@ -199,7 +199,7 @@
                         android:id="@+id/radioIngles"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="🇬🇧 English"
+                        android:text="@string/idioma_ingles"
                         android:textSize="15sp"
                         android:padding="8dp"
                         android:tag="en"/>
@@ -210,18 +210,19 @@
                     android:id="@+id/btnGuardarIdioma"
                     android:layout_width="match_parent"
                     android:layout_height="52dp"
-                    android:text="Guardar idioma"
+                    android:text="@string/perfil_guardar_idioma"
                     android:layout_marginTop="16dp"
                     app:cornerRadius="12dp"/>
 
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
-        <Button
+        <!-- Botón Editar Perfil -->
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btnEditarPerfil"
             android:layout_width="match_parent"
             android:layout_height="52dp"
-            android:text="Editar Perfil"
+            android:text="@string/perfil_editar"
             android:layout_marginTop="16dp"
             android:backgroundTint="#2196F3"
             android:textColor="@android:color/white"
@@ -229,12 +230,98 @@
             app:cornerRadius="12dp"
             style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
 
+        <!-- BLOQUE DE EDICIÓN -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/layoutEdicionPerfil"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="4dp"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/perfil_editar"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="#1A1A2E"
+                    android:layout_marginBottom="16dp"/>
+
+                <EditText
+                    android:id="@+id/editNombre"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="@string/editar_usuario"
+                    android:inputType="textPersonName"
+                    android:drawableStart="@android:drawable/ic_menu_edit"
+                    android:layout_marginBottom="8dp" />
+
+                <EditText
+                    android:id="@+id/editEmail"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="@string/editar_email"
+                    android:inputType="textEmailAddress"
+                    android:drawableStart="@android:drawable/ic_dialog_email"
+                    android:layout_marginBottom="8dp" />
+
+                <EditText
+                    android:id="@+id/editPassActual"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="@string/contra_actual"
+                    android:inputType="textPassword"
+                    android:drawableStart="@android:drawable/ic_lock_lock"
+                    android:layout_marginBottom="8dp" />
+
+                <EditText
+                    android:id="@+id/editPassNueva"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="@string/contra_nueva"
+                    android:inputType="textPassword"
+                    android:drawableStart="@android:drawable/ic_lock_lock"
+                    android:layout_marginBottom="16dp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnGuardarEdicionPerfil"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:text="@string/perfil_guardar_edicion"
+                        app:cornerRadius="12dp"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnCancelarEdicionPerfil"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:text="@string/perfil_cancelar_edicion"
+                        app:cornerRadius="12dp"
+                        android:layout_marginStart="12dp"/>
+                </LinearLayout>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
         <!-- Botón cerrar sesión -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnCerrarSesion"
             android:layout_width="match_parent"
             android:layout_height="52dp"
-            android:text="Cerrar sesión"
+            android:text="@string/perfil_cerrar_sesion"
             app:cornerRadius="12dp"
             style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
 

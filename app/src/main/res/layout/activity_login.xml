@@ -29,7 +29,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="BiSmart"
+            android:text="@string/app_name"
             android:textSize="42sp"
             android:textStyle="bold"
             android:textColor="#FFFFFF"
@@ -39,7 +39,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Movilidad universitaria en Bilbao"
+            android:text="@string/descripcion_app"
             android:textSize="13sp"
             android:textColor="#CCF5F5F5"
             android:layout_marginBottom="40dp"/>
@@ -61,7 +61,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Iniciar sesión"
+                    android:text="@string/login_titulo"
                     android:textSize="20sp"
                     android:textStyle="bold"
                     android:textColor="#1A1A2E"
@@ -70,7 +70,7 @@
                 <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="Email"
+                    android:hint="@string/login_email"
                     android:background="@android:color/transparent"
                     style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                     android:layout_marginBottom="14dp">
@@ -84,7 +84,7 @@
                 <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="Contraseña"
+                    android:hint="@string/login_password"
                     android:background="@android:color/transparent"
                     style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                     app:passwordToggleEnabled="true"
@@ -100,7 +100,7 @@
                     android:id="@+id/btnLogin"
                     android:layout_width="match_parent"
                     android:layout_height="52dp"
-                    android:text="Entrar"
+                    android:text="@string/login_boton"
                     android:textSize="16sp"
                     app:cornerRadius="12dp"/>
 
@@ -111,7 +111,7 @@
             android:id="@+id/tvGoToRegister"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="¿No tienes cuenta? Regístrate aquí"
+            android:text="@string/login_registro"
             android:textColor="#FFFFFF"
             android:textSize="14sp"
             android:padding="12dp"
